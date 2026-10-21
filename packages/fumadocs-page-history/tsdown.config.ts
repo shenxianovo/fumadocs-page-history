@@ -9,6 +9,7 @@ export default defineConfig({
   entry: [
     './src/index.ts',
     './src/git/index.ts',
+    './src/workspace/index.ts',
     './src/ui/index.ts',
     './src/i18n/index.ts',
     './src/remark.ts',

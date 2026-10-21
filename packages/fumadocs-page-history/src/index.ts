@@ -27,6 +27,55 @@ export interface HistoryCommit {
   tags?: { name: string; url: string }[];
 }
 
+export interface PageDiffHunk {
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  /** Unified patch lines, including their leading space, +, -, or \\. */
+  lines: string[];
+}
+
+export type PageDiff = {
+  sourcePath: string;
+  previousPath: string;
+} & (
+  | { hunks: PageDiffHunk[]; additions: number; deletions: number; unavailable?: never }
+  | { unavailable: 'too-large' | 'binary' | 'complexity'; hunks?: never }
+);
+
+export interface SourceRange {
+  start: number;
+  end: number;
+  /** Plain text for paragraphs whose original inline formatting can be retained. */
+  text?: string;
+}
+
+export interface InlinePageChanges {
+  sourcePath: string;
+  /** Digest of the working source; prevents marking a stale rendered document. */
+  sourceHash: string;
+  additions: number;
+  deletions: number;
+  added: SourceRange[];
+  removed: { beforeLine: number; markdown: string; inlineStart?: number }[];
+  paragraphs: {
+    start: number;
+    text: string;
+    segments: {
+      text: string;
+      kind: 'same' | 'added' | 'removed';
+      linkTarget?: { previous: string; current: string };
+    }[];
+  }[];
+  metadataChanged: boolean;
+}
+
+export type PageChangesResult =
+  | { changed: false }
+  | { changed: true; changes: InlinePageChanges }
+  | { changed: true; unavailable: 'too-large' | 'binary' | 'complexity' | 'conflict' };
+
 export interface ChangelogFrontmatter {
   authors?: string[];
   gitChangelog?:

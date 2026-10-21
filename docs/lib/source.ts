@@ -17,6 +17,8 @@ const docs = defineDocs({
             repository: { url: 'https://github.com/shenxianovo/fumadocs-page-history' },
             authorMappings: [{ gitName: 'shenxianovo', githubUsername: 'shenxianovo' }],
             maxGitLogCount: 12,
+            workspaceChanges: true,
+            filter: (file: string) => !/[\\/]demo\.mdx$/.test(file),
             ...(process.env.GITHUB_TOKEN
               ? {
                   github: {

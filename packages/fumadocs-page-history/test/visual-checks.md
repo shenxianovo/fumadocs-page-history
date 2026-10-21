@@ -1,5 +1,49 @@
 # Visual regression checks
 
+## Inline working changes
+
+Run the local docs server and open `/docs/configuration` in development mode.
+The compiler option `workspaceChanges: true` and `/api/page-changes` are enabled
+in this workspace. No inline markers should appear in a production build.
+
+1. Replace a phrase in the opening paragraph. Shared words and the existing link
+   must appear once; only deleted and added phrases get red and green backgrounds.
+   There must be no outline, line numbers, popup, or separate comparison page.
+2. Add one row to the first table. Only that row gets a green background; the
+   header and existing rows retain their normal backgrounds.
+3. Add or delete a complete paragraph or code block. Deleted content remains at
+   its original position, including deletion at the end of the document.
+4. Stage an edit, then edit the same paragraph again. The display must compare
+   HEAD with the working file, including both changes. Commit or revert it and
+   verify that markers clear within three seconds without restarting the server.
+5. Check at 390px and 1200px, in both themes. Existing headings, links, code,
+   table overflow, history, and table-of-contents navigation must still work.
+6. During a source rebuild, the page must not decorate old text with a new diff.
+   A pending notice may appear until the source digest matches. Missing routes
+   and merge conflicts must show a notice, with the normal document preserved.
+
+Paragraph regression: whole-block replacement used to repeat the common prefix
+in both a red and a green paragraph. Verify that the opening phrase occurs once.
+Repeat after expanding the replacement suffix until the paragraph is much longer;
+the shared prefix must still appear once instead of falling back to whole blocks.
+Link regression: change only a Markdown link destination. The full paragraph
+must appear once, the current link must keep its destination, and only its label
+gets highlighted. Hovering the highlight must show both source targets.
+Automatic refresh: no manual refresh button should appear. Git-only updates and
+recovery from a failed comparison must continue automatically.
+Chinese regression: changing a word such as 程序 to 进程 must highlight complete
+words. A largely unrelated replacement paragraph must keep both full paragraphs
+rather than splicing them around isolated shared characters. Confirm that both
+the old and current text can be recovered without dropped or duplicated text.
+Table regression: inserting a row used to highlight the entire table.
+Deleted table regressions: replace an entire table and verify that the red old
+table retains its headers and cells rather than showing Markdown pipes. Its
+outer edges must align with the new table at 390px and 1200px; deletion styling
+must not add padding around the old table, and its body rows must retain the red
+background in both themes.
+
+## History layout
+
 The UI tests render server HTML without a browser layout engine. Use the docs demo
 to check CSS alignment changes:
 

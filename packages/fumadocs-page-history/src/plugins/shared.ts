@@ -10,6 +10,8 @@ import type { GitChangelogProps } from '../ui/changelog';
 import { resolveContentPath, type ContentLocation } from '../paths';
 
 export interface GitChangelogOptions extends HistoryOptions {
+  /** Inline HEAD-to-working-source changes in local development only. */
+  workspaceChanges?: boolean | { endpoint?: string };
   /** Optional location mapping for documents copied outside their checkout. */
   content?: ContentLocation;
   /** Select documents by their absolute source path. Defaults to every document. */

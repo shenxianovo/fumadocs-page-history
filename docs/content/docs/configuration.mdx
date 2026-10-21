@@ -3,7 +3,7 @@ title: Configuration
 description: Required settings, optional account mappings, and advanced controls.
 ---
 
-Both compiler plugins accept the same settings. Start with the [minimal setup](/docs); most sites need only `repository.url`.
+Both compiler plugins accept the same settings. Start with the [minimal setup](/docs) for history and contributors; enable inline workspace changes when reviewing uncommitted edits in your local documentation site.
 
 ## Required and optional settings
 
@@ -16,6 +16,7 @@ Both compiler plugins accept the same settings. Start with the [minimal setup](/
 | `repository.directory` | No       | Auto-discovered                 | A directory inside the local checkout, used to locate Git.       |
 | `content`              | No       | Files keep their checkout paths | Location mapping for documents copied to another directory.      |
 | `getHistoryPaths`      | No       | No extra paths                  | Additional historical paths for explicitly mapped migrations.    |
+| `workspaceChanges`     | No       | `false`                         | Show uncommitted changes inline during local development.        |
 
 `repository.url` must have no credentials, query, or fragment. It is provided explicitly and is never inferred from remote credentials. Local paths and account-matching selectors stay in the build process.
 
@@ -77,6 +78,51 @@ Dates use the browser's time zone. Server HTML and the initial client render use
 `locale` controls dates and contributor names. Interface labels use the site's translation provider; see the complete [Chinese setup](/docs/localization).
 
 Visible section headings appear in **On this page**. Automatic anchors avoid existing headings. Multiple manual instances need distinct IDs; a custom `id` gives contributors the default anchor `<id>-contributors`. Screens up to 640px hide commit hashes to leave space for messages.
+
+## Inline workspace changes
+
+Use the document itself to review work in progress. Add `workspaceChanges: true` beside `repository` in either compiler plugin's settings:
+
+```ts
+{
+  repository: { url: 'https://github.com/owner/repository' },
+  workspaceChanges: true,
+}
+```
+
+Then add a Web-standard GET endpoint in your local application. For Next.js:
+
+```ts title="app/api/page-changes/route.ts"
+import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
+```
+
+`contentDirectory` is relative to the **Git root**, including when the app runs in a subdirectory. For example, this documentation site uses `docs/content/docs`. Set `repositoryDirectory` only when the endpoint runs outside the checkout. To change the endpoint URL, use `workspaceChanges: { endpoint: '/api/my-page-changes' }`.
+
+### What readers see
+
+Open a document normally. Changed words in ordinary Markdown paragraphs are marked in place: shared text appears once, removed words have a red background, and added words have a green background. Existing links and emphasis stay in place. Entirely added or removed paragraphs, lists and code blocks receive the corresponding background. Adding a table row highlights just that row. There are no line numbers, dashboard, or popup.
+
+The baseline is the latest commit, compared with the current working file. Both staged and unstaged edits are included. New documents are all additions. A pure rename with unchanged contents produces no highlights. Renames use the original HEAD path. Changes to frontmatter appear as a metadata notice.
+
+The comparison refreshes automatically every three seconds while the page is visible and when the window regains focus. Failed reads retry automatically. Committing or reverting clears the highlights. A source digest prevents applying a fresh diff to an older page while the development server is rebuilding it.
+
+If only a link destination changes, the paragraph appears once and the affected link is highlighted. Hover over the highlight to inspect its old and new targets.
+
+### Scope and limits
+
+This is a local development feature. Production compilation does not add source annotations or the comparison component. The endpoint always returns 404 outside development and rejects cross-origin or non-localhost requests. It reads only Markdown/MDX files inside the configured directory. It does not run Git write operations.
+
+Each source is limited to 200,000 bytes by default, configurable through the endpoint's `maxBytes` option. Binary content, merge conflicts, and excessively complex comparisons show a notice. A deleted document no longer has a normal page to decorate.
+
+Word-level comparison applies to plain Markdown paragraphs with text, inline code, links, and emphasis. Words use Unicode segmentation, including Chinese word boundaries. Replacements with little shared text keep complete old and new paragraphs instead of interleaving incidental matches. Complex MDX, code blocks, lists, and table replacements or deletions use a block-level fallback. Deleted content is rendered as inert Markdown, including GFM tables: JSX and HTML are escaped, and old MDX components are never executed. This can differ from the original display of custom components. Comparisons require the rendered source to match the checkout file; copied content that differs from the checkout will wait for a matching source rather than show incorrect highlights.
+
+`gitChangelog: false` controls the history footer independently; the development comparison can still appear on that page. Existing history and contributor settings work as before.
+
+For custom integrations, `readPageChanges(options, sourcePath)` from `fumadocs-page-history/workspace` returns serializable block changes. `GitPageChangesView` and `GitChangeBlock` from the UI entry point separate the inline rendering from Git reads and refresh behavior.
 
 ## Per-page controls
 

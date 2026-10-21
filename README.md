@@ -8,6 +8,7 @@ Per-page Git history and contributors for Fumadocs. A community-maintained integ
 - Enable each section independently, globally or per page.
 - Follow file renames, credit co-authors, and display release tags.
 - Use Fumadocs components, themes, accessible collapse controls, and translations.
+- Optionally show uncommitted edits directly in rendered documents during local development.
 - Optionally resolve GitHub avatars and profile links at build time, with caching and bounded requests.
 
 ## Quick start
@@ -75,6 +76,27 @@ getHistoryPaths: (sourcePath) =>
 The current path is always included. Histories follow actual renames, preserve page creation and independent edits made during merges, and do not follow template copies. Pure merges that keep the page identical to any parent are omitted; their branch commits are still followed. Results are deduplicated by SHA and sorted by author date before limiting. The same option is available to both compiler plugins, `createHistoryReader`, and `readPageHistory`; no migration paths are guessed.
 
 See [Setup](https://fumadocs-page-history.vercel.app/docs), [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration), and [Troubleshooting](https://fumadocs-page-history.vercel.app/docs/troubleshooting). Both Radix UI and Base UI are supported. Sätteri uses `gitChangelog` from `fumadocs-page-history/satteri` with the same settings.
+
+## Inline changes during development
+
+Enable `workspaceChanges: true` beside `repository` in the compiler plugin options. Add a local Next.js endpoint:
+
+```ts
+// app/api/page-changes/route.ts
+import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
+```
+
+`contentDirectory` is relative to the Git root. A custom URL can be set with `workspaceChanges: { endpoint: '/api/page-changes' }`.
+
+While running the development server, paragraph edits show shared text once and mark only removed words in red and added words in green, directly in the normal document. Entirely added or removed blocks receive the corresponding background; adding a table row highlights only that row. There are no line numbers or separate comparison views. Changes compare the latest commit with the current source, including staged and unstaged edits. They refresh every three seconds and when the window regains focus, so committing or reverting clears the markers without restarting the server.
+
+Production builds keep normal documents and metadata-only history. The endpoint returns 404 outside development and accepts only same-origin localhost requests. Sources over 200 KB, binary content and merge conflicts show a fallback. See [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration#inline-workspace-changes) for details.
+
+The public [Demo](https://fumadocs-page-history.vercel.app/docs/demo#inline-workspace-changes) includes saved, interactive examples of inline changes. It uses the real comparison and rendering components with fixed source documents, so visitors can see the effect without a local Git checkout.
 
 ## Workspace
 

@@ -353,3 +353,83 @@
     transition: none;
   }
 }
+
+/* Development-only changes decorate the normal rendered document. */
+.fgc-inline-page {
+  --fgc-added: #238636;
+  --fgc-removed: #da3633;
+  min-width: 0;
+}
+.fgc-inline-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-block: 1.25rem;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  color: var(--color-fd-muted-foreground);
+  font-size: 0.8125rem;
+}
+.fgc-inline-legend {
+  display: inline-flex;
+  gap: 0.75rem;
+}
+.fgc-inline-legend > :first-child {
+  color: var(--fgc-added);
+}
+.fgc-inline-legend > :last-child {
+  color: var(--fgc-removed);
+}
+.fgc-inline-block {
+  display: contents;
+}
+.fgc-inline-block[data-change='added'],
+.fgc-inline-removed {
+  display: flow-root;
+  min-width: 0;
+  margin-block: 1.25rem;
+  padding: 0.25rem 0.75rem;
+  overflow-wrap: anywhere;
+}
+.fgc-inline-block[data-change='added'] {
+  background: color-mix(in srgb, var(--fgc-added) 10%, transparent);
+}
+.fgc-inline-removed {
+  background: color-mix(in srgb, var(--fgc-removed) 10%, transparent);
+}
+.fgc-inline-block[data-change='added'] > :first-child,
+.fgc-inline-removed > :first-child {
+  margin-top: 0;
+}
+.fgc-inline-block[data-change='added'] > :last-child,
+.fgc-inline-removed > :last-child {
+  margin-bottom: 0;
+}
+.fgc-inline-removed pre {
+  overflow-x: auto;
+}
+@media (max-width: 640px) {
+  .fgc-inline-block[data-change='added'],
+  .fgc-inline-removed {
+    padding: 0.25rem 0.5rem;
+  }
+}
+.fgc-inline-text[data-change='added'],
+.fgc-inline-text[data-change='link'],
+.fgc-inline-page tr[data-change='added'] {
+  background: color-mix(in srgb, var(--fgc-added) 20%, transparent);
+}
+.fgc-inline-text[data-change='removed'] {
+  background: color-mix(in srgb, var(--fgc-removed) 20%, transparent);
+}
+
+/* Keep deleted tables aligned with normal tables, including on small screens. */
+.fgc-inline-removed:has(> table:only-child) {
+  padding: 0;
+  background: transparent;
+}
+.fgc-inline-removed > table:only-child tr {
+  background: color-mix(in srgb, var(--fgc-removed) 20%, transparent);
+}

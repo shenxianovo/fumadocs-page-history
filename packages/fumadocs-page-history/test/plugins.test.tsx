@@ -58,6 +58,9 @@ const probe = `data:text/javascript,${encodeURIComponent(`
 export function GitChangelog(props) { return 'HISTORY:' + JSON.stringify(props); }
 export function GitContributors(props) { return 'CONTRIBUTORS:' + JSON.stringify(props); }
 export function GitChangelogLabel({ section }) { return section === 'contributors' ? 'Contributors' : 'Page history'; }
+export function GitPageChanges({ children }) { return children; }
+export function GitChangeBlock({ children }) { return children; }
+export function GitChangeText({ value }) { return value; }
 `)}`;
 
 describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) => {
@@ -168,6 +171,42 @@ describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) 
     expect(code).not.toContain('legacy-guide.md');
     expect(code).not.toContain(cwd);
     expect((await build()).html).not.toContain('Legacy page history');
+  });
+
+  it.each(['md', 'mdx'] as const)(
+    'wraps development %s without losing native headings, history or JSX',
+    async (extension) => {
+      vi.stubEnv('NODE_ENV', 'development');
+      try {
+        const { code, html, toc } = await build({
+          extension,
+          settings: { ...options, workspaceChanges: true },
+        });
+        expect(code).toContain('GitPageChanges');
+        expect(code).toContain('GitChangeBlock');
+        expect(code).toContain('/api/page-changes');
+        expect(code).toContain(`apps/docs/page.${extension}`);
+        expect(code).not.toContain(cwd);
+        expect(html).toContain('Original content.');
+        expect(html).toContain('HISTORY:');
+        expect(toc.map((item) => item.url)).toContain('#article');
+        expect(html.indexOf('HISTORY:')).toBeGreaterThan(html.indexOf('</pre>'));
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
+
+  it('never adds a workspace endpoint or source metadata to production or default pages', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      expect(
+        (await build({ settings: { ...options, workspaceChanges: true } })).code,
+      ).not.toContain('GitPageChanges');
+      expect((await build()).code).not.toContain('sourceHash');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it.each(['md', 'mdx'] as const)(

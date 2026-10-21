@@ -27,3 +27,13 @@ assert.ok(demo.includes('Preview options'), 'The Story controls must render');
 assert.ok(!demo.includes('>Props<'), 'The preview must not repeat the controls heading');
 assert.ok(!demo.includes('No generated data for story'), 'Story must receive compiled controls');
 console.log('Built Story demo and root redirect checks passed.');
+assert.ok(demo.includes('Inline changes demo'), 'The published inline changes demo must render');
+assert.ok(
+  demo.includes('data-workspace-example="expanded-paragraph"'),
+  'The default inline example must render in production',
+);
+assert.ok(
+  demo.includes('data-change="added"') && demo.includes('data-change="removed"'),
+  'The published demo must show both change colors',
+);
+console.log('Built inline changes demo checks passed.');

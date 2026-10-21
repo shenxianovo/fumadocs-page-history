@@ -32,6 +32,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./git": "./dist/git/index.js",
+    "./workspace": "./dist/workspace/index.js",
     "./ui": "./dist/ui/index.js",
     "./i18n": "./dist/i18n/index.js",
     "./css/*": "./css/*",
@@ -54,12 +55,15 @@
   "dependencies": {
     "@fuma-translate/react": "^1.0.2",
     "@types/mdast": "^4.0.4",
+    "diff": "^9.0.0",
     "estree-util-value-to-estree": "^3.5.0",
     "github-slugger": "^2.0.0",
     "lucide-react": "^1.50.0",
     "mdast-util-mdx": "^3.0.0",
     "mdast-util-to-string": "^4.0.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
     "tinyexec": "^1.3.1",
     "unified": "^11.0.5",
     "zod": "^4.6.5"

@@ -17,6 +17,20 @@ const translations = {
   'Commits(git changelog)': '次提交',
   'Commit(git changelog)': '次提交',
   'Collapse history(git changelog)': '收起历史',
+  'Page changes are unavailable. Reconnecting automatically.(git changelog)':
+    '暂时无法读取页面差异，正在自动重连。',
+  'Resolve merge conflicts to view page changes.(git changelog)':
+    '请先解决合并冲突，再查看页面差异。',
+  'This page cannot be compared inline.(git changelog)': '此页面无法显示正文差异。',
+  'The page is updating. Changes will appear when it is ready.(git changelog)':
+    '页面正在更新，完成后将显示差异。',
+  'Uncommitted changes(git changelog)': '未提交修改',
+  'Added(git changelog)': '新增',
+  'Removed(git changelog)': '删除',
+  'Page metadata changed(git changelog)': '页面元数据已修改',
+  'Link target changed(git changelog)': '链接目标已修改',
+  'Removed content(git changelog)': '已删除的内容',
+  'Added content(git changelog)': '新增的内容',
 } satisfies Translations;
 
 export type GitChangelogTranslationKey = keyof Translations;

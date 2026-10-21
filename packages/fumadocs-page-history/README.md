@@ -72,3 +72,20 @@ The callback receives a normalized path relative to the Git root and returns add
 See [Setup](https://fumadocs-page-history.vercel.app/docs), [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration), and [Troubleshooting](https://fumadocs-page-history.vercel.app/docs/troubleshooting). Both Radix UI and Base UI are supported. Sätteri uses `gitChangelog` from `fumadocs-page-history/satteri` with the same settings.
 
 Inspired by [Nolebase Git Changelog](https://nolebase-integrations.ayaka.io/pages/en/integrations/git-changelog/); see [NOTICE](./NOTICE).
+
+## Inline changes during development
+
+Add `workspaceChanges: true` to the compiler plugin settings and register a local endpoint:
+
+```ts
+// app/api/page-changes/route.ts
+import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
+```
+
+`contentDirectory` is relative to the Git root. Paragraph edits keep shared text once and mark removed words in red and added words in green; new table rows are highlighted individually. Complex content uses a block-level fallback. There are no line numbers or a separate viewer. It compares HEAD with the working source, including staged edits. Git state refreshes every three seconds and on window focus.
+
+Production builds omit inline comparisons, and the endpoint returns 404 outside local development. See [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration#inline-workspace-changes).
