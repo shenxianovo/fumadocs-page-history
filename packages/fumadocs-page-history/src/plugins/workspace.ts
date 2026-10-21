@@ -107,7 +107,11 @@ export function createWorkspaceWrapper(options: GitChangelogOptions) {
       children.push({
         type: 'mdxJsxFlowElement',
         name: block,
-        attributes: [attr('index', index), ...(node.type === 'table' ? [attr('table', true)] : [])],
+        attributes: [
+          attr('key', index),
+          attr('index', index),
+          ...(node.type === 'table' ? [attr('table', true)] : []),
+        ],
         children: [node],
       } as MdxJsxFlowElement);
     }

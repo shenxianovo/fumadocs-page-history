@@ -63,6 +63,21 @@ export function GitChangeBlock({ children }) { return children; }
 export function GitChangeText({ value }) { return value; }
 `)}`;
 
+// Recreate compiled children across a server/client boundary: development-only
+// validation flags are not serialized, but explicit keys are preserved.
+const workspaceProbe = `data:text/javascript,${encodeURIComponent(`
+import { createElement } from '${import.meta.resolve('react')}';
+import { GitPageChangesView } from '${import.meta.resolve('../dist/ui/index.js')}';
+export { GitChangelog, GitContributors, GitChangelogLabel, GitChangeBlock, GitChangeText } from ${JSON.stringify(probe)};
+export function GitPageChanges({ children }) {
+  const blocks = Array.isArray(children) ? children : [children];
+  const restored = blocks.map(child => child && typeof child === 'object'
+    ? createElement(child.type, { ...child.props, ...(child.key === null ? {} : { key: child.key }) }) : child);
+  return createElement('section', { 'data-missing-keys': blocks.filter(child => child && typeof child === 'object' && child.key === null).length },
+    createElement(GitPageChangesView, { ranges: [] }, restored));
+}
+`)}`;
+
 describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) => {
   async function build({
     extension = 'mdx',
@@ -70,12 +85,14 @@ describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) 
     settings = options,
     content = source,
     file = `page.${extension}`,
+    workspaceRuntime = false,
   }: {
     extension?: 'md' | 'mdx';
     frontmatter?: ChangelogFrontmatter;
     settings?: GitChangelogOptions;
     content?: string;
     file?: string;
+    workspaceRuntime?: boolean;
   } = {}) {
     const filePath = path.join(cwd, 'apps/docs', file);
     const code =
@@ -105,7 +122,7 @@ describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) 
             })
           ).code;
     const executable = code
-      .replaceAll('fumadocs-page-history/ui', probe)
+      .replaceAll('fumadocs-page-history/ui', workspaceRuntime ? workspaceProbe : probe)
       .replaceAll('react/jsx-runtime', import.meta.resolve('react/jsx-runtime'));
     const { default: Content, toc } = await import(
       `data:text/javascript,${encodeURIComponent(executable)}`
@@ -116,6 +133,23 @@ describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) 
       toc: toc as { title: React.ReactNode; url: string; depth: number }[],
     };
   }
+
+  it('preserves document child keys across the server/client boundary', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { html } = await build({
+        settings: { ...options, workspaceChanges: true },
+        workspaceRuntime: true,
+      });
+      expect(error.mock.calls.flat().join(' ')).not.toContain('unique "key" prop');
+      expect(html).toContain('data-missing-keys="0"');
+      expect(html).toContain('Original content.');
+    } finally {
+      error.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
 
   it('keeps tokens and identity emails out of compiled pages while resolving GitHub authors', async () => {
     const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
