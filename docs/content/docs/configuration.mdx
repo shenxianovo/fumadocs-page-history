@@ -1,128 +1,24 @@
 ---
-title: Configuration
-description: Required settings, optional account mappings, and advanced controls.
+title: Configuration reference
+description: Plugin settings, page controls, collection registration, and advanced Git options.
 ---
 
-Both compiler plugins accept the same settings. Start with the [minimal setup](/docs) for history and contributors; enable inline workspace changes when reviewing uncommitted edits in your local documentation site.
+Both compiler plugins accept the same settings. For installation, start with [Getting started](/docs). For a walkthrough, use the guides for [workspace changes](/docs/workspace-changes), [contributors](/docs/contributors), or [display and language](/docs/localization).
 
 ## Required and optional settings
 
-| Setting                | Required | Default                         | Meaning                                                          |
-| ---------------------- | -------- | ------------------------------- | ---------------------------------------------------------------- |
-| `repository.url`       | Yes      | —                               | Public HTTP(S) repository URL used for commit and release links. |
-| `authorMappings`       | No       | `[]`                            | Explicit Git-identity-to-GitHub-account associations.            |
-| `display`              | No       | Built-in defaults               | Locale and presentation controls.                                |
-| `github`               | No       | Disabled                        | Optional build-time GitHub account lookup.                       |
-| `repository.directory` | No       | Auto-discovered                 | A directory inside the local checkout, used to locate Git.       |
-| `content`              | No       | Files keep their checkout paths | Location mapping for documents copied to another directory.      |
-| `getHistoryPaths`      | No       | No extra paths                  | Additional historical paths for explicitly mapped migrations.    |
-| `workspaceChanges`     | No       | `false`                         | Show uncommitted changes inline during local development.        |
+| Setting                | Required | Default                         | Meaning                                                                      |
+| ---------------------- | -------- | ------------------------------- | ---------------------------------------------------------------------------- |
+| `repository.url`       | Yes      | —                               | Public HTTP(S) repository URL used for commit and release links.             |
+| `authorMappings`       | No       | `[]`                            | [Git identity and account associations](/docs/contributors#author-mappings). |
+| `display`              | No       | Built-in defaults               | [Presentation and language controls](/docs/localization).                    |
+| `github`               | No       | Disabled                        | [Build-time account lookup](/docs/contributors#optional-github-lookup).      |
+| `repository.directory` | No       | Auto-discovered                 | A directory inside the local checkout, used to locate Git.                   |
+| `content`              | No       | Files keep their checkout paths | Location mapping for documents copied to another directory.                  |
+| `getHistoryPaths`      | No       | No extra paths                  | Additional historical paths for explicitly mapped migrations.                |
+| `workspaceChanges`     | No       | `false`                         | [Inline uncommitted changes](/docs/workspace-changes).                       |
 
 `repository.url` must have no credentials, query, or fragment. It is provided explicitly and is never inferred from remote credentials. Local paths and account-matching selectors stay in the build process.
-
-## Author mappings
-
-```ts
-const options = {
-  repository: { url: 'https://github.com/owner/repository' },
-  authorMappings: [
-    { gitName: 'Alex', githubUsername: 'alex' },
-    { gitEmail: 'alex@example.com', githubUsername: 'alex' },
-  ],
-};
-```
-
-Every mapping needs `githubUsername` and at least one of `gitName` or `gitEmail`. Names and emails ignore case and surrounding whitespace. When both selectors are present, **both must match**. Email-qualified mappings take precedence over name-only mappings. Multiple mappings can credit the same account.
-
-| Mapping field    | Required              | Meaning                                                    |
-| ---------------- | --------------------- | ---------------------------------------------------------- |
-| `githubUsername` | Yes                   | GitHub account used for its profile and avatar.            |
-| `gitName`        | At least one selector | Git author name to match.                                  |
-| `gitEmail`       | At least one selector | Git author email to match.                                 |
-| `displayName`    | No                    | Public name; defaults to `githubUsername`.                 |
-| `avatar`, `url`  | No                    | Override the avatar or profile URL.                        |
-| `i18n`           | No                    | Public names by locale, such as `{ 'zh-CN': '亚历克斯' }`. |
-
-Resolution order is explicit mappings, GitHub noreply addresses, then optional GitHub lookup for unresolved primary authors. Other identities keep their Git names and initials. Account names are never guessed from arbitrary Git names or emails.
-
-Each account counts once per commit, including co-authors. Counts reflect returned history records. Matching emails and selectors are not included in public author records.
-
-## Display
-
-Set `display` in plugin settings, or pass these props to `GitChangelog`:
-
-```ts
-const display = {
-  locale: 'zh-CN',
-  defaultExpanded: true,
-  commitsRelativeTime: true,
-};
-```
-
-| Setting                                         | Default   | Effect                                                 |
-| ----------------------------------------------- | --------- | ------------------------------------------------------ |
-| `locale`                                        | `en`      | Date formatting and localized contributor names.       |
-| `defaultExpanded`                               | `false`   | Show the timeline on initial render.                   |
-| `commitsRelativeTime`                           | `false`   | Relative dates for commit rows.                        |
-| `showContributors`                              | `true`    | Show contributors above the timeline.                  |
-| `hideChangelogHeader`, `hideContributorsHeader` | `false`   | Hide section headings and their TOC entries.           |
-| `hideChangelogNoChangesText`                    | `false`   | Hide an empty-history message in manually rendered UI. |
-| `hideSortBy`                                    | `false`   | Hide the sorting button.                               |
-| `displayAuthorsInsideCommitLine`                | `false`   | Add avatars beside each commit.                        |
-| `numCommitHashLetters`                          | `7`       | Short commit hash length.                              |
-| `id`, `contributorsId`                          | Automatic | Override the section anchors.                          |
-| `className`                                     | —         | Add wrapper classes.                                   |
-
-Dates use the browser's time zone. Server HTML and the initial client render use UTC; mounted pages use the browser zone. A date near midnight may change after hydration. There is no time-zone setting.
-
-`locale` controls dates and contributor names. Interface labels use the site's translation provider; see the complete [Chinese setup](/docs/localization).
-
-Visible section headings appear in **On this page**. Automatic anchors avoid existing headings. Multiple manual instances need distinct IDs; a custom `id` gives contributors the default anchor `<id>-contributors`. Screens up to 640px hide commit hashes to leave space for messages.
-
-## Inline workspace changes
-
-Use the document itself to review work in progress. Add `workspaceChanges: true` beside `repository` in either compiler plugin's settings:
-
-```ts
-{
-  repository: { url: 'https://github.com/owner/repository' },
-  workspaceChanges: true,
-}
-```
-
-Then add a Web-standard GET endpoint in your local application. For Next.js:
-
-```ts title="app/api/page-changes/route.ts"
-import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
-```
-
-`contentDirectory` is relative to the **Git root**, including when the app runs in a subdirectory. For example, this documentation site uses `docs/content/docs`. Set `repositoryDirectory` only when the endpoint runs outside the checkout. To change the endpoint URL, use `workspaceChanges: { endpoint: '/api/my-page-changes' }`.
-
-### What readers see
-
-Open a document normally. Changed words in ordinary Markdown paragraphs are marked in place: shared text appears once, removed words have a red background, and added words have a green background. Existing links and emphasis stay in place. Entirely added or removed paragraphs, lists and code blocks receive the corresponding background. Adding a table row highlights just that row. There are no line numbers, dashboard, or popup.
-
-The baseline is the latest commit, compared with the current working file. Both staged and unstaged edits are included. New documents are all additions. A pure rename with unchanged contents produces no highlights. Renames use the original HEAD path. Changes to frontmatter appear as a metadata notice.
-
-The comparison refreshes automatically every three seconds while the page is visible and when the window regains focus. Failed reads retry automatically. Committing or reverting clears the highlights. A source digest prevents applying a fresh diff to an older page while the development server is rebuilding it.
-
-If only a link destination changes, the paragraph appears once and the affected link is highlighted. Hover over the highlight to inspect its old and new targets.
-
-### Scope and limits
-
-This is a local development feature. Production compilation does not add source annotations or the comparison component. The endpoint always returns 404 outside development and rejects cross-origin or non-localhost requests. It reads only Markdown/MDX files inside the configured directory. It does not run Git write operations.
-
-Each source is limited to 200,000 bytes by default, configurable through the endpoint's `maxBytes` option. Binary content, merge conflicts, and excessively complex comparisons show a notice. A deleted document no longer has a normal page to decorate.
-
-Word-level comparison applies to plain Markdown paragraphs with text, inline code, links, and emphasis. Words use Unicode segmentation, including Chinese word boundaries. Replacements with little shared text keep complete old and new paragraphs instead of interleaving incidental matches. Complex MDX, code blocks, lists, and table replacements or deletions use a block-level fallback. Deleted content is rendered as inert Markdown, including GFM tables: JSX and HTML are escaped, and old MDX components are never executed. This can differ from the original display of custom components. Comparisons require the rendered source to match the checkout file; copied content that differs from the checkout will wait for a matching source rather than show incorrect highlights.
-
-`gitChangelog: false` controls the history footer independently; the development comparison can still appear on that page. Existing history and contributor settings work as before.
-
-For custom integrations, `readPageChanges(options, sourcePath)` from `fumadocs-page-history/workspace` returns serializable block changes. `GitPageChangesView` and `GitChangeBlock` from the UI entry point separate the inline rendering from Git reads and refresh behavior.
 
 ## Per-page controls
 
@@ -228,27 +124,3 @@ When compilation uses a copy of your documents, declare where it belongs in the 
 ```
 
 A copied `guide.mdx` reads history for `apps/docs/content/guide.mdx`. The package resolves native Windows or POSIX disk paths, handles symlinked directories, and produces Git-relative paths internally. Files outside `content.directory` and repository paths that escape the checkout are rejected. Use `pathInRepository: '.'` when the content directory represents the repository root.
-
-## Optional GitHub lookup
-
-Ordinary emails can be associated with GitHub accounts during compilation:
-
-```ts
-{
-  repository: { url: 'https://github.com/owner/repository' },
-  github: { token: process.env.GITHUB_TOKEN },
-}
-```
-
-Only unresolved primary authors are queried. Commits must already exist in that GitHub repository. Co-authors are not assigned the primary author's account. Provide the token to the documentation build step; public repositories need no additional repository permission, and fine-grained tokens for private repositories need **Contents: read**.
-
-| Setting       | Default                                     | Meaning                                                           |
-| ------------- | ------------------------------------------- | ----------------------------------------------------------------- |
-| `token`       | None                                        | Missing tokens skip lookup with one warning.                      |
-| `cacheDir`    | `node_modules/.cache/fumadocs-page-history` | Git-root-relative cache directory; `false` disables disk caching. |
-| `maxRequests` | `100`                                       | Budget per reader/compiler worker.                                |
-| `timeoutMs`   | `5000`                                      | Timeout per request.                                              |
-
-Successful mappings are cached for seven days; unavailable or unassociated commits for five minutes. Network failures and rate limits are not persisted. Cache keys hash identity emails and are separated by repository. Tokens and emails are never included in pages or cached records.
-
-Requests are serialized within each reader, with deduplication and shared disk caching. Workers have separate budgets and may duplicate cold-cache requests. Authentication failures, rate limits, server errors, and timeouts stop further requests in that reader; cached mappings remain available. Lookup or cache failures fall back to local author information, with at most one warning per reader. Omit `github` for offline builds.

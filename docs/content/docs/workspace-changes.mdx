@@ -1,0 +1,67 @@
+---
+title: Workspace changes
+description: Review staged and unstaged document edits in the normal page.
+---
+
+Enable this feature to see uncommitted edits while browsing your local documentation. Removed content is red and added content is green. The [interactive demo](/docs/demo#inline-workspace-changes) shows saved examples that also work on the published site.
+
+## Enable local comparison
+
+### Enable the compiler option
+
+After [installing the compiler plugin](/docs), add `workspaceChanges: true` beside `repository` in either compiler plugin's settings:
+
+```ts
+{
+  repository: { url: 'https://github.com/owner/repository' },
+  workspaceChanges: true,
+}
+```
+
+### Add the local endpoint
+
+Then add a Web-standard GET endpoint in your local application. For Next.js:
+
+```ts title="app/api/page-changes/route.ts"
+import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
+```
+
+`contentDirectory` is relative to the **Git root**, including when the app runs in a subdirectory. For example, this documentation site uses `docs/content/docs`. Set `repositoryDirectory` only when the endpoint runs outside the checkout. To change the endpoint URL, use `workspaceChanges: { endpoint: '/api/my-page-changes' }`.
+
+## Review changes
+
+Open a document normally. The baseline is the latest commit compared with the current working file, including staged and unstaged edits.
+
+| Change                    | What appears in the document                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Edit a paragraph          | Small edits keep shared text once; rewrites keep both paragraphs with stronger highlights on changed words. |
+| Change a link destination | The paragraph appears once; hover over the highlighted link to see the old and new targets.                 |
+| Add a table row           | Only the new row is green.                                                                                  |
+| Add or remove a block     | The complete block receives the corresponding background.                                                   |
+| Edit frontmatter          | A metadata notice indicates changes such as the title or description.                                       |
+| Rename a file             | Comparison uses the original HEAD path. Unchanged content has no highlights.                                |
+
+New documents appear as additions. Committing or reverting clears the highlights.
+
+### Automatic updates
+
+Saving a document updates its content through the development server. The comparison also refreshes every three seconds while the page is visible and when the window regains focus, so staging or committing does not require a restart. Failed reads retry automatically.
+
+While the development server is rebuilding, the comparison waits for the rendered page to match the working source. History and contributor records have a separate lifecycle: they are compiled into the page and need a rebuild after Git-only changes.
+
+## Scope and limits
+
+This feature runs only in local development. Production compilation omits source annotations and the live comparison component. The endpoint returns 404 outside development, accepts only same-origin localhost requests, and reads only Markdown/MDX files inside the configured directory.
+
+- **Word-level highlighting:** ordinary Markdown paragraphs with text, inline code, links, and emphasis. Unicode word segmentation includes Chinese. Replacements with little shared text keep complete old and new paragraphs on light red and green backgrounds, with stronger highlights on the changed words.
+- **Block-level fallback:** complex MDX, code blocks, lists, and table replacements or deletions. Deleted content is rendered as inert Markdown, including GFM tables. JSX and HTML are escaped, so custom components can look different from their original display.
+- **Unavailable comparisons:** binary content, merge conflicts, and excessively complex changes show a notice. Each source is limited to 200,000 bytes by default; configure the endpoint's `maxBytes` option to change this limit.
+- **Source matching:** copied documents must match the checkout source before highlights appear. A deleted document has no normal page to decorate.
+
+The comparison reads Git state without modifying it. `gitChangelog: false` controls the history footer independently; the development comparison can still appear on that page.
+
+For [custom integrations](/docs/manual#workspace-changes), use the Git reader and rendering components separately. For connection problems, see [Troubleshooting](/docs/troubleshooting#workspace-highlights-are-missing-or-reconnecting).

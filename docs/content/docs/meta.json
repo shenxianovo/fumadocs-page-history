@@ -1,4 +1,16 @@
 {
   "title": "Page History",
-  "pages": ["index", "demo", "localization", "configuration", "troubleshooting", "manual"]
+  "pages": [
+    "---Start---",
+    "index",
+    "demo",
+    "---Guides---",
+    "workspace-changes",
+    "contributors",
+    "localization",
+    "---Reference---",
+    "configuration",
+    "manual",
+    "troubleshooting"
+  ]
 }

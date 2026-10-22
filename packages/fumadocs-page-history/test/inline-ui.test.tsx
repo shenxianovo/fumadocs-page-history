@@ -5,6 +5,116 @@ import { GitPageChangesView, GitChangeBlock, GitChangeText } from '../src/ui';
 import { buildInlineChanges } from '../src/workspace/inline';
 import { zhCN } from '../src/i18n';
 
+it.each([
+  ['Alpha.', 'Beta.'],
+  ['🚀', '🌟'],
+])(
+  'keeps full revisions and word emphasis without shared letters: %s → %s',
+  (previous, current) => {
+    const result = buildInlineChanges(`${previous}\n`, `${current}\n`, 'docs/page.md');
+    if (!result.changed || !('changes' in result)) throw new Error('Expected changes');
+    expect(result.changes.paragraphs).toHaveLength(1);
+    expect(result.changes.paragraphs[0].layout).toBe('separate');
+    const html = renderToStaticMarkup(
+      <GitPageChangesView changes={result.changes} ranges={[{ start: 1, end: 1, text: current }]}>
+        <GitChangeBlock index={0}>
+          <p>
+            <GitChangeText index={0} start={0} value={current} />
+          </p>
+        </GitChangeBlock>
+      </GitPageChangesView>,
+    );
+    expect(html).toContain('class="fgc-inline-text" data-change="removed"');
+    expect(html).toContain('class="fgc-inline-text" data-change="added"');
+    const texts = [...html.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((match) =>
+      match[1].replace(/<[^>]*>/g, ''),
+    );
+    expect(texts).toEqual([previous, current]);
+  },
+);
+
+it.each(['✅', '+'])('keeps an unchanged symbol out of surrounding replacements: %s', (symbol) => {
+  const previous = `Read old ${symbol} today.`;
+  const current = `Read new ${symbol} tomorrow.`;
+  const result = buildInlineChanges(`${previous}\n`, `${current}\n`, 'docs/page.md');
+  if (!result.changed || !('changes' in result)) throw new Error('Expected changes');
+  const { segments } = result.changes.paragraphs[0];
+  expect(
+    segments
+      .filter((part) => part.kind === 'same')
+      .map((part) => part.text)
+      .join(''),
+  ).toContain(symbol);
+  expect(
+    segments
+      .filter((part) => part.kind !== 'added')
+      .map((part) => part.text)
+      .join(''),
+  ).toBe(previous);
+  expect(
+    segments
+      .filter((part) => part.kind !== 'removed')
+      .map((part) => part.text)
+      .join(''),
+  ).toBe(current);
+});
+
+it('does not prefer repeated space tokens over shared English words', () => {
+  const previous =
+    'A Chinese page needs two settings: the site provides translated labels, and `display.locale` selects Chinese date formatting and contributor names. The examples below include both.';
+  const current =
+    "Use `display` settings to change the history's appearance. For Chinese, configure both translated interface labels and date formatting. These settings apply after the [minimal installation](/docs); the [Demo](/docs/demo#history-and-contributors) lets you try them before editing your site.";
+  const result = buildInlineChanges(`${previous}\n`, `${current}\n`, 'docs/localization.mdx');
+  if (!result.changed || !('changes' in result)) throw new Error('Expected changes');
+  const paragraph = result.changes.paragraphs[0];
+  const common = paragraph.segments
+    .filter((part) => part.kind === 'same')
+    .map((part) => part.text)
+    .join('|');
+  expect(common).toContain('translated');
+  expect(common).toContain('labels');
+  expect(common).toContain('date formatting');
+  const plain = (text: string) => text.replace(/`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  expect(
+    paragraph.segments
+      .filter((part) => part.kind !== 'added')
+      .map((part) => part.text)
+      .join(''),
+  ).toBe(plain(previous));
+  expect(
+    paragraph.segments
+      .filter((part) => part.kind !== 'removed')
+      .map((part) => part.text)
+      .join(''),
+  ).toBe(plain(current));
+});
+
+it('keeps a rewritten paragraph in two blocks with stronger word highlights on both sides', () => {
+  const previous =
+    'Page History adds contributors and a collapsible commit timeline to your documentation. Try the [interactive demo](/docs/demo).';
+  const current = 'Page History brings Git context into your Fumadocs pages:';
+  const result = buildInlineChanges(`${previous}\n`, `${current}\n`, 'docs/index.mdx');
+  if (!result.changed || !('changes' in result)) throw new Error('Expected changes');
+  const html = renderToStaticMarkup(
+    <GitPageChangesView changes={result.changes} ranges={[{ start: 1, end: 1, text: current }]}>
+      <GitChangeBlock index={0}>
+        <p>
+          <GitChangeText index={0} start={0} value={current} />
+        </p>
+      </GitChangeBlock>
+    </GitPageChangesView>,
+  );
+  expect(html.match(/Page History/g)).toHaveLength(2);
+  expect(html).toContain('class="fgc-inline-removed"');
+  expect(html).toContain('class="fgc-inline-block" data-change="added"');
+  expect(html).toMatch(/Page History\s*<span[^>]*data-change="removed"/);
+  expect(html).toMatch(/Page History\s*<span[^>]*data-change="added"/);
+  expect(html).toContain('href="/docs/demo"');
+  expect(html.replace(/<[^>]*>/g, '')).toBe(
+    previous.replace('[interactive demo](/docs/demo)', 'interactive demo') + current,
+  );
+});
+
 it('shows the Heartbeat paragraph once when only the link destination changes', () => {
   const label = '实体定义登记';
   const suffix =
@@ -58,7 +168,23 @@ it('does not splice unrelated rewritten paragraphs together around incidental Ch
     '已实现的离线导入与本机读取由 [Source Collector](./sources/index.mdx) 运行，前台状态由独立程序 `src/Observers/Heartbeat.Observer.ForegroundState/` 运行。';
   const result = buildInlineChanges(`${previous}\n`, `${current}\n`, 'docs/page.mdx');
   if (!result.changed || !('changes' in result)) throw new Error('Expected changes');
-  expect(result.changes.paragraphs).toEqual([]);
+  const paragraph = result.changes.paragraphs[0];
+  const html = renderToStaticMarkup(
+    <GitPageChangesView
+      changes={result.changes}
+      ranges={[{ start: 1, end: 1, text: paragraph.text }]}
+    >
+      <GitChangeBlock index={0}>
+        <p>
+          <GitChangeText index={0} start={0} value={paragraph.text} />
+        </p>
+      </GitChangeBlock>
+    </GitPageChangesView>,
+  );
+  const texts = [...html.matchAll(/<p>([\s\S]*?)<\/p>/g)].map((match) =>
+    match[1].replace(/<[^>]*>/g, ''),
+  );
+  expect(texts).toEqual([previous, paragraph.text]);
   expect(result.changes.removed[0].markdown).toBe(previous);
 });
 
@@ -203,6 +329,27 @@ it('renders red deleted Markdown and green current content in document order wit
   expect(html.indexOf('Removed at end')).toBeGreaterThan(html.indexOf('<strong>New'));
   expect(html.match(/id="page"/g)).toHaveLength(1);
   expect(html).not.toMatch(/<dialog|<table|line-number/);
+});
+
+it('falls back to complete blocks when compiled paragraph text does not match', () => {
+  const result = buildInlineChanges('Shared old\n', 'Shared new\n', 'docs/page.md');
+  if (!result.changed || !('changes' in result)) throw new Error('Expected changes');
+  const html = renderToStaticMarkup(
+    <GitPageChangesView
+      changes={result.changes}
+      ranges={[{ start: 1, end: 1, text: 'Different rendered text' }]}
+    >
+      <GitChangeBlock index={0}>
+        <p>
+          <GitChangeText index={0} start={0} value="Different rendered text" />
+        </p>
+      </GitChangeBlock>
+    </GitPageChangesView>,
+  );
+  expect(html).toContain('<p>Shared old</p>');
+  expect(html).toContain('<p>Different rendered text</p>');
+  expect(html).toContain('class="fgc-inline-block" data-change="added"');
+  expect(html).not.toContain('class="fgc-inline-text"');
 });
 
 it('keeps clean content unmarked and historical JSX inert', () => {

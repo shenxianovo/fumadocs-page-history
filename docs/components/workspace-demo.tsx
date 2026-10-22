@@ -91,6 +91,13 @@ function example(
 // Public examples use the real comparison and UI, with fixed sources rather than local Git data.
 const examples = [
   example(
+    'rewritten-paragraph',
+    'Rewritten paragraph',
+    'A rewrite keeps both paragraphs complete. Shared words use the light background; changed words have stronger highlights.',
+    'Page History adds contributors and a collapsible commit timeline to your documentation. Try the [interactive demo](/docs/demo).\n',
+    paragraph(['Page History brings Git context into your Fumadocs pages:']),
+  ),
+  example(
     'expanded-paragraph',
     'Expanded paragraph',
     'Shared text appears once, even when the replacement makes the paragraph much longer.',
@@ -107,13 +114,6 @@ const examples = [
     'Chinese replacements keep whole words together.',
     '使用应用程序读取观测数据。\n',
     paragraph(['使用应用进程读取观测数据。']),
-  ),
-  example(
-    'rewritten-paragraph',
-    'Rewritten paragraph',
-    'A full rewrite keeps the old and new paragraphs readable instead of mixing unrelated words.',
-    'Documentation is published after a manual review.\n',
-    paragraph(['Every update appears immediately while you browse your local documentation.']),
   ),
   example(
     'new-table-row',

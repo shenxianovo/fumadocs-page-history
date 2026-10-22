@@ -42,7 +42,7 @@ Create a new reader for each build. The compiler plugins manage this themselves.
 
 ## Components
 
-`GitChangelog` accepts `commits`, optional additional `authors`, and the [display props](/docs/configuration#display). Pass `repository: { url }` when manually supplied records lack `repositoryUrl`.
+`GitChangelog` accepts `commits`, optional additional `authors`, and the [display props](/docs/localization#display-options). Pass `repository: { url }` when manually supplied records lack `repositoryUrl`.
 
 For contributors only:
 
@@ -53,3 +53,9 @@ import { GitContributors } from 'fumadocs-page-history/ui';
 ```
 
 `resolveAuthors(names, authorMappings)` from the Git entry point resolves additional authors. `shouldShowChangelog(frontmatter)` and `shouldShowContributors(frontmatter)` from `fumadocs-page-history` apply the same per-page controls as the plugins.
+
+## Workspace changes
+
+The [Workspace changes guide](/docs/workspace-changes) covers the compiler plugin and local endpoint. For a custom integration, `readPageChanges(options, sourcePath)` from `fumadocs-page-history/workspace` reads the comparison and returns serializable changes.
+
+`GitPageChangesView`, `GitChangeBlock`, and `GitChangeText` from `fumadocs-page-history/ui` render those changes independently of Git access and automatic refresh. The [inline Demo](/docs/demo#inline-workspace-changes) uses this separation with saved source documents.

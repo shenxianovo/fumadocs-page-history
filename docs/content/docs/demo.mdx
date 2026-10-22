@@ -1,25 +1,33 @@
 ---
 title: Demo
-description: Try Page History with live controls.
+description: Try history, contributors, and inline workspace changes with interactive examples.
 gitChangelog: false
 ---
 
-Choose an **Example** or adjust the controls below the preview. Expand and sort the history, switch languages, and use the site's theme switch to try light and dark mode.
+Explore [history and contributors](#history-and-contributors), or jump to [inline workspace changes](#inline-workspace-changes). Both previews use saved data and work on the published site.
+
+## History and contributors
+
+Choose an **Example** or adjust **Preview options**. Expand and sort the timeline, switch languages, and use the site's theme switch to try light and dark mode.
 
 <ChangelogDemo />
 
-**Language** changes both labels and dates. **Start expanded** sets the initial open state; you can also open and close the history directly in the preview. **Empty history** shows the empty state, while disabling both sections hides them. **Reset** restores the selected example, including its expansion and sort order.
+**Reset** restores the selected example. **Language** changes both labels and dates. **Start expanded** sets the initial open state; the timeline can also be opened directly. To use these settings in your site, see [Display & language](/docs/localization).
 
-The preview uses a saved snapshot of [this project's Git history](https://github.com/shenxianovo/fumadocs-page-history/commits/main/docs/content/docs/index.mdx), with [shenxianovo's GitHub profile](https://github.com/shenxianovo). The **Co-authors** example adds an illustrative author with a longer name and no avatar. No GitHub token is needed to view it.
+The preview uses a saved snapshot of [this project's Git history](https://github.com/shenxianovo/fumadocs-page-history/commits/main/docs/content/docs/index.mdx), with [shenxianovo's GitHub profile](https://github.com/shenxianovo). The **Co-authors** example adds an illustrative author with a longer name and no avatar.
 
 ## Inline workspace changes
 
-Try these saved examples on this site, including the published version. Select **Change example** to see paragraph edits, Chinese word boundaries, table rows, and link destinations. The preview uses the package's actual comparison and rendering components with fixed sample documents.
+Select **Change example** to explore paragraph edits, Chinese word boundaries, table rows, and link destinations. Removed content is red and added content is green. In a full rewrite, each paragraph has a light background and the changed words have stronger highlights.
 
 <WorkspaceDemo />
 
+These fixed sample documents use the package's actual comparison and rendering components. They do not read a visitor's checkout or require GitHub access.
+
 ## Try your own documents
 
-When running this site locally with `pnpm docs-dev`, edit a phrase in [Configuration](/docs/configuration) or another document. The normal page keeps shared text once and shows only removed words in red and added words in green. Adding a table row highlights just the new row. Save another edit to update the rendered content; stage or commit it to check how the markers respond. Pure Git changes refresh within three seconds. This Demo page uses only the saved examples so its own source edits do not obscure the preview.
+Follow the [Workspace changes guide](/docs/workspace-changes) to enable local comparison in your site.
 
-Live comparison with your checkout is available only in local development. Production documents keep their normal appearance; the saved examples above remain interactive. See [inline workspace changes](/docs/configuration#inline-workspace-changes) for integration details.
+To try this repository locally, run `pnpm docs-dev` and edit a phrase in [Configuration reference](/docs/configuration) or another document. Save to update the content; stage or commit to see how the markers respond. Git-only changes refresh within three seconds. In development, this page's own source edits are highlighted too; the interactive examples continue to use their saved sources.
+
+Live checkout comparisons run only in local development. Production documents keep their normal appearance, while the saved examples above remain interactive.

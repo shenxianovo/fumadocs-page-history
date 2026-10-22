@@ -29,7 +29,7 @@ assert.ok(!demo.includes('No generated data for story'), 'Story must receive com
 console.log('Built Story demo and root redirect checks passed.');
 assert.ok(demo.includes('Inline changes demo'), 'The published inline changes demo must render');
 assert.ok(
-  demo.includes('data-workspace-example="expanded-paragraph"'),
+  demo.includes('data-workspace-example="rewritten-paragraph"'),
   'The default inline example must render in production',
 );
 assert.ok(

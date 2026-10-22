@@ -143,7 +143,7 @@ export function createWorkspaceHandler(options: WorkspaceOptions) {
     } catch (error) {
       return error instanceof WorkspaceError
         ? json({ error: error.message }, error.status)
-        : json({ error: 'Unable to read page changes. Refresh and try again.' }, 500);
+        : json({ error: 'Unable to read page changes.' }, 500);
     }
   };
 }

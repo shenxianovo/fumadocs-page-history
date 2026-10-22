@@ -62,6 +62,8 @@ export interface InlinePageChanges {
   paragraphs: {
     start: number;
     text: string;
+    /** Keep full revisions for rewrites; interleave smaller edits in one paragraph. */
+    layout: 'inline' | 'separate';
     segments: {
       text: string;
       kind: 'same' | 'added' | 'removed';

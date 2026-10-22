@@ -60,7 +60,7 @@ To associate a Git author with a GitHub account, add an optional mapping:
 
 Mappings supply profile links and avatars without GitHub API requests. Without mappings, GitHub noreply emails supply accounts; other authors appear with their Git names and initials.
 
-Dates use the reader's browser time zone. Server HTML starts in UTC and switches after hydration. For Chinese labels and dates, follow the [Chinese setup](https://fumadocs-page-history.vercel.app/docs/localization).
+Dates use the reader's browser time zone. Server HTML starts in UTC and switches after hydration. For Chinese labels and dates, follow the [Display & language](https://fumadocs-page-history.vercel.app/docs/localization).
 
 History is collected at compilation time. New files need a first commit; restart the development server after Git-only changes. Use a complete checkout (`fetch-depth: 0` in GitHub Actions). The deployed site does not need Git.
 
@@ -92,9 +92,9 @@ export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
 
 `contentDirectory` is relative to the Git root. A custom URL can be set with `workspaceChanges: { endpoint: '/api/page-changes' }`.
 
-While running the development server, paragraph edits show shared text once and mark only removed words in red and added words in green, directly in the normal document. Entirely added or removed blocks receive the corresponding background; adding a table row highlights only that row. There are no line numbers or separate comparison views. Changes compare the latest commit with the current source, including staged and unstaged edits. They refresh every three seconds and when the window regains focus, so committing or reverting clears the markers without restarting the server.
+While running the development server, paragraph edits show shared text once and mark only removed words in red and added words in green, directly in the normal document. Full paragraph rewrites retain both revisions, using a light background for each block and stronger word highlights for changes. Entirely added or removed blocks receive the corresponding background; adding a table row highlights only that row. There are no line numbers or separate comparison views. Changes compare the latest commit with the current source, including staged and unstaged edits. They refresh every three seconds and when the window regains focus, so committing or reverting clears the markers without restarting the server.
 
-Production builds keep normal documents and metadata-only history. The endpoint returns 404 outside development and accepts only same-origin localhost requests. Sources over 200 KB, binary content and merge conflicts show a fallback. See [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration#inline-workspace-changes) for details.
+Production builds keep normal documents and metadata-only history. The endpoint returns 404 outside development and accepts only same-origin localhost requests. Sources over 200 KB, binary content and merge conflicts show a fallback. See [Workspace changes](https://fumadocs-page-history.vercel.app/docs/workspace-changes) for details.
 
 The public [Demo](https://fumadocs-page-history.vercel.app/docs/demo#inline-workspace-changes) includes saved, interactive examples of inline changes. It uses the real comparison and rendering components with fixed source documents, so visitors can see the effect without a local Git checkout.
 

@@ -1,9 +1,15 @@
 ---
-title: Page History
-description: Add contributors and per-page Git history with one required setting.
+title: Getting started
+description: Add per-page Git history and contributors, then enable local edit previews when needed.
 ---
 
-Page History adds contributors and a collapsible commit timeline to your documentation. Try the [interactive demo](/docs/demo).
+Page History brings Git context into your Fumadocs pages:
+
+- **Page history:** a collapsible commit timeline after each document.
+- **Contributors:** authors and co-authors, with optional GitHub profiles and avatars.
+- **Workspace changes:** opt-in red and green highlights for uncommitted edits during local development.
+
+[Try the interactive demo](/docs/demo) to see all three. The steps below install history and contributors. Add [workspace changes](/docs/workspace-changes) afterward if you want to review edits in the page.
 
 ## Setup
 
@@ -86,31 +92,18 @@ Contributors and history appear after each committed document. No page-template 
 
 Keep your existing plugins. If a collection has its own compiler options, register Page History there using the [collection configuration](/docs/configuration#collection-options). Sites with blog posts or other MDX collections should register it only for the intended collection.
 
-## Optional: associate GitHub accounts
-
-Add `authorMappings` to the same plugin settings:
-
-```ts
-{
-  repository: { url: 'https://github.com/owner/repository' },
-  authorMappings: [
-    { gitName: 'Alex', githubUsername: 'alex' },
-  ],
-}
-```
-
-This associates commits by Alex with the GitHub account `alex`, supplying a profile link and avatar. It makes no GitHub API requests. Actual contributors still come from the page's commits. See [matching rules](/docs/configuration#author-mappings) for email selectors and additional contributors.
-
-## What happens automatically
+## Check the result
 
 - History is read during compilation; Git is not needed in the deployed site.
 - File renames, co-authors, and release tags are included.
 - Both sections are enabled; the history timeline starts collapsed.
 - Dates switch from UTC server HTML to the reader's browser time zone after hydration.
 - New pages without commits or explicit contributors have no footer. Development logs explain why.
-- Git-only changes require a development-server restart or a fresh production build.
+- History and contributor records are compiled into the page. After a Git-only change, restart the development server or build again. The optional workspace comparison refreshes automatically; it has a separate lifecycle.
 
-GitHub Actions needs a full checkout:
+## Build and deploy
+
+Git and the full repository history must be available during compilation. The deployed site does not need Git for the history footer. GitHub Actions needs a full checkout:
 
 ```yaml
 - uses: actions/checkout@v6
@@ -120,4 +113,12 @@ GitHub Actions needs a full checkout:
 
 For an existing shallow clone, run `git fetch --unshallow`.
 
-Continue with [Chinese setup](/docs/localization), [Configuration](/docs/configuration), or [Troubleshooting](/docs/troubleshooting).
+## Next steps
+
+| Goal                                       | Guide                                          |
+| ------------------------------------------ | ---------------------------------------------- |
+| Review edits without leaving the document  | [Workspace changes](/docs/workspace-changes)   |
+| Connect authors to GitHub accounts         | [Contributors](/docs/contributors)             |
+| Change the appearance or use Chinese       | [Display & language](/docs/localization)       |
+| Look up an option or configure collections | [Configuration reference](/docs/configuration) |
+| Diagnose a missing footer or stale history | [Troubleshooting](/docs/troubleshooting)       |

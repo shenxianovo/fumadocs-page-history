@@ -1,5 +1,13 @@
 # fumadocs-page-history
 
+## 0.4.0
+
+### Minor Changes
+
+- 0f2b427: Add opt-in inline document changes in local development. Compare HEAD with the working source, including staged edits, and mark changed words in paragraphs without repeating shared context. Highlight new table rows individually and use block-level fallbacks for complex content. Refresh Git-only changes without restarting the documentation server.
+
+  Keep both revisions of rewritten paragraphs complete, with stronger highlights on changed words. Preserve shared English and Chinese text, highlight link-only destination changes without repeating paragraphs, and retain deleted GFM tables. Include saved interactive examples on the published Demo and separate setup guides from configuration reference documentation.
+
 ## 0.3.3
 
 ### Patch Changes

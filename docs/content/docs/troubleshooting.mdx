@@ -11,7 +11,9 @@ Commit the page, then restart the development server. If the logged path is unex
 
 ## History did not update after a commit
 
-History is compiled into the page. A Git-only change does not invalidate the MDX compiler automatically. Restart the development server or produce a fresh production build. The package does not watch Git internals.
+History and contributor records are compiled into the page. A Git-only change does not invalidate the MDX compiler automatically. Restart the development server or produce a fresh production build.
+
+This differs from [workspace changes](/docs/workspace-changes): the optional local comparison reads fresh Git state automatically and does not need a restart after staging, committing, or reverting.
 
 ## No footer on an existing page
 
@@ -21,6 +23,15 @@ Check these in order:
 2. The page is not excluded by `filter` or frontmatter controls.
 3. The file has committed history under the resolved Git path.
 4. The source is Markdown or MDX. Generated OpenAPI pages and React pages do not run the compiler plugin; custom content pipelines can use the [Git reader and UI](/docs/manual).
+
+## Workspace highlights are missing or reconnecting
+
+1. Confirm the site is running in development. Production documents intentionally omit live comparisons; the [Demo](/docs/demo#inline-workspace-changes) still shows saved examples.
+2. Check both integration steps: enable the compiler option and register the [local endpoint](/docs/workspace-changes#add-the-local-endpoint).
+3. Set `contentDirectory` relative to the Git root, including the app's subdirectory when needed. Open the page through localhost.
+4. Save the source and wait for the page to finish rebuilding. The comparison waits until the rendered page matches the working file. While visible, the page retries failed reads automatically.
+
+A metadata notice refers to the document's frontmatter, such as its title or description. These changes do not necessarily affect the body. Large files, conflicts, and complex content have the [documented comparison limits](/docs/workspace-changes#scope-and-limits).
 
 ## Git is missing or the checkout is shallow
 
@@ -32,11 +43,11 @@ The deployed site does not need Git when using the compiler plugin. Custom conte
 
 ## A contributor has initials instead of an avatar
 
-Git names and ordinary emails do not identify a GitHub account. Add an [author mapping](/docs/configuration#author-mappings), or enable optional GitHub lookup. Manual mappings and GitHub noreply identities need no token. API lookup needs a build-time token and a commit already present in the configured GitHub repository.
+Git names and ordinary emails do not identify a GitHub account. Add an [author mapping](/docs/contributors#author-mappings), or enable optional GitHub lookup. Manual mappings and GitHub noreply identities need no token. API lookup needs a build-time token and a commit already present in the configured GitHub repository.
 
 ## Dates are Chinese but labels are English
 
-`display.locale` changes date formatting and contributor names. Labels come from the site's translation provider. Follow the complete [Chinese setup](/docs/localization).
+`display.locale` changes date formatting and contributor names. Labels come from the site's translation provider. Follow the complete [Display & language setup](/docs/localization#single-language-site).
 
 ## A date changes after the page loads
 

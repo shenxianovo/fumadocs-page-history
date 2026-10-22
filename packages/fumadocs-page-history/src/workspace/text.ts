@@ -1,8 +1,93 @@
+import { diffArrays } from 'diff';
 import type { RootContent, PhrasingContent } from 'mdast';
 import type { InlinePageChanges } from '../index';
 
+type ParagraphChange = Omit<InlinePageChanges['paragraphs'][number], 'start'>;
+
+const wordSegmenter = new Intl.Segmenter('en', { granularity: 'word' });
+// Keep whitespace with the following word so repeated spaces cannot win the
+// alignment over real words. Exact token equality preserves both source texts.
+const words = (text: string) => {
+  const result: string[] = [];
+  let whitespace = '';
+  for (const { segment } of wordSegmenter.segment(text)) {
+    if (/^\s+$/u.test(segment)) whitespace += segment;
+    else {
+      result.push(whitespace + segment);
+      whitespace = '';
+    }
+  }
+  if (whitespace) result.push(whitespace);
+  return result;
+};
+const significantLength = (text: string) => text.replace(/[^\p{L}\p{N}]/gu, '').length;
+
+function inlineSegments(changes: { value: string; added?: boolean; removed?: boolean }[]) {
+  const result: ParagraphChange['segments'] = [];
+  let old = '';
+  let current = '';
+  const flush = () => {
+    if (old) result.push({ text: old, kind: 'removed' });
+    if (current) result.push({ text: current, kind: 'added' });
+    old = '';
+    current = '';
+  };
+  for (const [i, change] of changes.entries()) {
+    if (change.removed) old += change.value;
+    else if (change.added) current += change.value;
+    else if (
+      (old || current) &&
+      /^[\s\p{P}]+$/u.test(change.value) &&
+      (changes[i + 1]?.added || changes[i + 1]?.removed)
+    ) {
+      // Shared spaces/punctuation inside a replacement are not useful anchors.
+      // Keep the old/new phrases together instead of alternating every word.
+      old += change.value;
+      current += change.value;
+    } else {
+      flush();
+      result.push({ text: change.value, kind: 'same' });
+    }
+  }
+  flush();
+  return result;
+}
+
+/** Compare an already paired paragraph; layout never decides which blocks match. */
+export function compareParagraphs(
+  previous: RootContent,
+  current: RootContent,
+): ParagraphChange | undefined {
+  const oldText = paragraphText(previous);
+  const text = paragraphText(current);
+  if (oldText === undefined || text === undefined) return;
+  if (oldText === text) {
+    const segments = linkTargetSegments(previous, current);
+    // Unsupported formatting-only changes retain complete blocks.
+    return segments ? { text, layout: 'inline', segments } : undefined;
+  }
+  const changes = diffArrays(words(oldText), words(text), {
+    maxEditLength: 2000,
+    timeout: 200,
+  })?.map((part) => ({ ...part, value: part.value.join('') }));
+  if (!changes) return;
+  const commonLength = changes.reduce(
+    (length, part) => length + (part.added || part.removed ? 0 : significantLength(part.value)),
+    0,
+  );
+  const replacement = changes.some((part) => part.added) && changes.some((part) => part.removed);
+  // Layout only: keep expansions inline, but show substantial rewrites as full
+  // revisions. The shorter side retains the original context of long expansions.
+  const inline =
+    commonLength > 0 &&
+    (!replacement ||
+      commonLength >= Math.min(significantLength(oldText), significantLength(text)) / 2);
+  // Even a complete rewrite keeps word results for emphasis in both revisions.
+  return { text, layout: inline ? 'inline' : 'separate', segments: inlineSegments(changes) };
+}
+
 /** Preserve a paragraph once when its only visible-source change is link targets. */
-export function linkTargetSegments(previous: RootContent, current: RootContent) {
+function linkTargetSegments(previous: RootContent, current: RootContent) {
   const structure = (node: RootContent) =>
     JSON.stringify(node, (key, value) => (key === 'position' || key === 'url' ? undefined : value));
   if (structure(previous) !== structure(current)) return;
@@ -31,7 +116,7 @@ export function linkTargetSegments(previous: RootContent, current: RootContent) 
       : [];
   });
   if (!changed.length) return;
-  const segments: InlinePageChanges['paragraphs'][number]['segments'] = [];
+  const segments: ParagraphChange['segments'] = [];
   let offset = 0;
   for (const link of changed) {
     if (link.start > offset) segments.push({ text: text.slice(offset, link.start), kind: 'same' });

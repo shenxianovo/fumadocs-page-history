@@ -5,13 +5,26 @@ import { useTranslations } from '@fuma-translate/react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { InlinePageChanges, PageChangesResult, SourceRange } from '../index';
+import { highlightRemovedWords } from './removed-words';
+
+interface RemovedContent {
+  markdown: string;
+  segments?: InlinePageChanges['paragraphs'][number]['segments'];
+}
+
+type ParagraphChange = InlinePageChanges['paragraphs'][number];
 
 interface ChangesContext {
   changes?: InlinePageChanges;
   ranges: readonly SourceRange[];
-  removedBefore: Map<number, string[]>;
+  paragraphs: ReadonlyMap<number, ParagraphChange>;
+  removedBefore: Map<number, RemovedContent[]>;
 }
-const Context = createContext<ChangesContext>({ ranges: [], removedBefore: new Map() });
+const Context = createContext<ChangesContext>({
+  ranges: [],
+  paragraphs: new Map(),
+  removedBefore: new Map(),
+});
 
 export interface GitPageChangesProps {
   sourcePath: string;
@@ -119,20 +132,29 @@ export function GitPageChangesView({
   ranges: readonly SourceRange[];
   children: ReactNode;
 }) {
-  const removedBefore = new Map<number, string[]>();
+  // Verify once, so blocks, text leaves, and removed revisions all use the same
+  // compiled-text match before applying offsets from the comparison.
+  const paragraphs = new Map<number, ParagraphChange>();
+  for (const range of ranges) {
+    const paragraph = changes?.paragraphs.find(
+      (entry) => entry.start === range.start && entry.text === range.text,
+    );
+    if (paragraph) paragraphs.set(range.start, paragraph);
+  }
+  const removedBefore = new Map<number, RemovedContent[]>();
   for (const removal of changes?.removed ?? []) {
-    const inline = changes?.paragraphs.find((paragraph) => paragraph.start === removal.inlineStart);
-    if (
-      inline &&
-      ranges.some((range) => range.start === inline.start && range.text === inline.text)
-    )
-      continue;
+    const paragraph =
+      removal.inlineStart === undefined ? undefined : paragraphs.get(removal.inlineStart);
+    if (paragraph?.layout === 'inline') continue;
     const index = ranges.findIndex((range) => range.end >= removal.beforeLine);
     const target = index < 0 ? ranges.length : index;
-    removedBefore.set(target, [...(removedBefore.get(target) ?? []), removal.markdown]);
+    removedBefore.set(target, [
+      ...(removedBefore.get(target) ?? []),
+      { markdown: removal.markdown, segments: paragraph?.segments },
+    ]);
   }
   return (
-    <Context.Provider value={{ changes, ranges, removedBefore }}>
+    <Context.Provider value={{ changes, ranges, paragraphs, removedBefore }}>
       <div className="fgc-inline-page">
         {children}
         <RemovedBlocks blocks={removedBefore.get(ranges.length)} />
@@ -141,12 +163,13 @@ export function GitPageChangesView({
   );
 }
 
-function RemovedBlocks({ blocks }: { blocks?: readonly string[] }) {
+function RemovedBlocks({ blocks }: { blocks?: readonly RemovedContent[] }) {
   const t = useTranslations({ note: 'git changelog' });
-  return blocks?.map((markdown, index) => (
+  return blocks?.map(({ markdown, segments }, index) => (
     <aside key={index} className="fgc-inline-removed" aria-label={t('Removed content')}>
       <Markdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={segments ? [highlightRemovedWords(segments)] : []}
         components={{ img: ({ alt }) => <span>{alt ?? ''}</span> }}
       >
         {markdown}
@@ -164,13 +187,11 @@ export function GitChangeBlock({
   table?: boolean;
   children: ReactNode;
 }) {
-  const { changes, ranges, removedBefore } = useContext(Context);
+  const { changes, ranges, paragraphs, removedBefore } = useContext(Context);
   const t = useTranslations({ note: 'git changelog' });
   const range = ranges[index];
   const ref = useRef<HTMLDivElement>(null);
-  const inline = changes?.paragraphs.find(
-    (paragraph) => paragraph.start === range?.start && paragraph.text === range?.text,
-  );
+  const paragraph = range && paragraphs.get(range.start);
   useEffect(() => {
     if (!table) return;
     for (const row of ref.current?.querySelectorAll<HTMLElement>('[data-git-row-start]') ?? []) {
@@ -189,7 +210,7 @@ export function GitChangeBlock({
       <div
         className="fgc-inline-block"
         ref={ref}
-        data-change={added && !inline && !table ? 'added' : undefined}
+        data-change={added && paragraph?.layout !== 'inline' && !table ? 'added' : undefined}
         aria-label={added ? t('Added content') : undefined}
       >
         {children}
@@ -211,17 +232,16 @@ export function GitChangeText({
   code?: boolean;
 }) {
   const t = useTranslations({ note: 'git changelog' });
-  const { changes, ranges } = useContext(Context);
+  const { ranges, paragraphs } = useContext(Context);
   const range = ranges[index];
-  const paragraph = changes?.paragraphs.find(
-    (entry) => entry.start === range?.start && entry.text === range?.text,
-  );
+  const paragraph = range && paragraphs.get(range.start);
   if (!paragraph) return code ? <code>{value}</code> : value;
   const end = start + value.length;
   let offset = 0;
   const content: ReactNode[] = [];
   for (const [i, segment] of paragraph.segments.entries()) {
     if (segment.kind === 'removed') {
+      if (paragraph.layout === 'separate') continue;
       if (offset >= start && (offset < end || (offset === end && end === paragraph.text.length)))
         content.push(
           <span key={i} className="fgc-inline-text" data-change="removed">

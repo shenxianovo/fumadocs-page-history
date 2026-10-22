@@ -1,9 +1,39 @@
 ---
-title: Chinese setup
-description: Configure Chinese labels and date formatting together.
+title: Display & language
+description: Adjust history presentation, translated labels, and date formatting.
 ---
 
-A Chinese page needs two settings: the site provides translated labels, and `display.locale` selects Chinese date formatting and contributor names. The examples below include both.
+Use `display` settings to change the history's appearance. For Chinese, configure both translated interface labels and date formatting. These settings apply after the [minimal installation](/docs); the [Demo](/docs/demo#history-and-contributors) lets you try them before editing your site.
+
+## Display options
+
+Set `display` in plugin settings, or pass these props to `GitChangelog`:
+
+```ts
+const display = {
+  locale: 'zh-CN',
+  defaultExpanded: true,
+  commitsRelativeTime: true,
+};
+```
+
+| Setting                                         | Default   | Effect                                                 |
+| ----------------------------------------------- | --------- | ------------------------------------------------------ |
+| `locale`                                        | `en`      | Date formatting and localized contributor names.       |
+| `defaultExpanded`                               | `false`   | Show the timeline on initial render.                   |
+| `commitsRelativeTime`                           | `false`   | Relative dates for commit rows.                        |
+| `showContributors`                              | `true`    | Show contributors above the timeline.                  |
+| `hideChangelogHeader`, `hideContributorsHeader` | `false`   | Hide section headings and their TOC entries.           |
+| `hideChangelogNoChangesText`                    | `false`   | Hide an empty-history message in manually rendered UI. |
+| `hideSortBy`                                    | `false`   | Hide the sorting button.                               |
+| `displayAuthorsInsideCommitLine`                | `false`   | Add avatars beside each commit.                        |
+| `numCommitHashLetters`                          | `7`       | Short commit hash length.                              |
+| `id`, `contributorsId`                          | Automatic | Override the section anchors.                          |
+| `className`                                     | —         | Add wrapper classes.                                   |
+
+`locale` controls dates and contributor names. Interface labels use the site's translation provider; configure both with the [single-language setup](#single-language-site) below.
+
+Visible section headings appear in **On this page**. Automatic anchors avoid existing headings. Multiple manual instances need distinct IDs; a custom `id` gives contributors the default anchor `<id>-contributors`. Screens up to 640px hide commit hashes to leave space for messages.
 
 ## Single-language site
 
@@ -81,4 +111,4 @@ For a manually rendered `GitChangelog`, pass `locale` for the current page. The 
 
 ## Time zones
 
-The reader's browser time zone is detected automatically. Server HTML uses UTC until hydration; dates near midnight can change when the browser zone is applied. This happens independently of the page language, with no time-zone configuration.
+The reader's browser time zone is detected automatically. Server HTML and the initial client render use UTC; mounted pages use the browser zone. A date near midnight may change after hydration. This happens independently of the page language, with no time-zone configuration.

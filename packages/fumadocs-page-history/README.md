@@ -51,7 +51,7 @@ To associate a Git author with a GitHub account, add an optional mapping:
 
 Mappings supply profile links and avatars without GitHub API requests. Without mappings, GitHub noreply emails supply accounts; other authors appear with their Git names and initials.
 
-Dates use the reader's browser time zone. Server HTML starts in UTC and switches after hydration. For Chinese labels and dates, follow the [Chinese setup](https://fumadocs-page-history.vercel.app/docs/localization).
+Dates use the reader's browser time zone. Server HTML starts in UTC and switches after hydration. For Chinese labels and dates, follow the [Display & language](https://fumadocs-page-history.vercel.app/docs/localization).
 
 History is collected at compilation time. New files need a first commit; restart the development server after Git-only changes. Use a complete checkout (`fetch-depth: 0` in GitHub Actions). The deployed site does not need Git.
 
@@ -86,6 +86,6 @@ export const dynamic = 'force-dynamic';
 export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
 ```
 
-`contentDirectory` is relative to the Git root. Paragraph edits keep shared text once and mark removed words in red and added words in green; new table rows are highlighted individually. Complex content uses a block-level fallback. There are no line numbers or a separate viewer. It compares HEAD with the working source, including staged edits. Git state refreshes every three seconds and on window focus.
+`contentDirectory` is relative to the Git root. Paragraph edits keep shared text once and mark removed words in red and added words in green; new table rows are highlighted individually. Full paragraph rewrites retain both revisions, using a light background for each block and stronger word highlights for changes. Complex content uses a block-level fallback. There are no line numbers or a separate viewer. It compares HEAD with the working source, including staged edits. Git state refreshes every three seconds and on window focus.
 
-Production builds omit inline comparisons, and the endpoint returns 404 outside local development. See [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration#inline-workspace-changes).
+Production builds omit inline comparisons, and the endpoint returns 404 outside local development. See [Workspace changes](https://fumadocs-page-history.vercel.app/docs/workspace-changes).
