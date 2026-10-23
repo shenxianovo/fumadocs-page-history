@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  Fragment,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { useTranslations } from '@fuma-translate/react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -91,21 +99,21 @@ export function GitPageChanges({
     snapshot?.sourcePath === sourcePath && snapshot.sourceHash === sourceHash
       ? snapshot
       : undefined;
+  let status: string | undefined;
+  if (failed) status = t('Page changes are unavailable. Reconnecting automatically.');
+  else if (!result?.changed) status = undefined;
+  else if ('unavailable' in result)
+    status =
+      result.unavailable === 'conflict'
+        ? t('Resolve merge conflicts to view page changes.')
+        : t('This page cannot be compared inline.');
+  else if (!changes) status = t('The page is updating. Changes will appear when it is ready.');
+  else status = t('Uncommitted changes');
   return (
     <GitPageChangesView changes={changes} ranges={ranges}>
-      {(failed || result?.changed) && (
+      {status && (
         <div className="fgc-inline-status not-prose" role="status">
-          <span>
-            {failed
-              ? t('Page changes are unavailable. Reconnecting automatically.')
-              : result?.changed && 'unavailable' in result
-                ? result.unavailable === 'conflict'
-                  ? t('Resolve merge conflicts to view page changes.')
-                  : t('This page cannot be compared inline.')
-                : snapshot && !changes
-                  ? t('The page is updating. Changes will appear when it is ready.')
-                  : t('Uncommitted changes')}
-          </span>
+          <span>{status}</span>
           {changes && (
             <span className="fgc-inline-legend">
               <span>
@@ -173,7 +181,8 @@ export function GitPageChangesView({
   return (
     <Context.Provider value={{ changes, ranges, paragraphs, removedBefore, listTails }}>
       <div className="fgc-inline-page">
-        {children}
+        {/* A keyed slot: lazy children from Server Components are otherwise key-checked as list items. */}
+        <Fragment key="content">{children}</Fragment>
         <RemovedBlocks blocks={removedBefore.get(ranges.length)} />
       </div>
     </Context.Provider>
@@ -206,12 +215,15 @@ function RemovedBlocks({
   listItem?: boolean;
 }) {
   const t = useTranslations({ note: 'git changelog' });
-  const Tag = listItem ? 'li' : 'aside';
+  // A labelled group, not an aside: each removal would otherwise add a page landmark.
+  const Tag = listItem ? 'li' : 'div';
   return blocks?.map(({ markdown, segments }, index) => (
     <Tag
       key={index}
       className={`fgc-inline-removed${listItem ? ' fgc-inline-list-item' : ''}`}
+      role={listItem ? undefined : 'group'}
       aria-label={t('Removed content')}
+      data-partial={segments ? '' : undefined}
     >
       <Markdown
         remarkPlugins={[remarkGfm]}
@@ -283,8 +295,12 @@ export function GitChangeBlock({
       else row.removeAttribute('data-change');
     }
   }, [table, changes, children]);
+  // Tables mark rows, and inline paragraphs mark words; other added blocks are marked whole.
   const added =
-    range && changes?.added.some((line) => line.start <= range.end && line.end >= range.start);
+    !table &&
+    paragraph?.layout !== 'inline' &&
+    !!range &&
+    !!changes?.added.some((line) => line.start <= range.end && line.end >= range.start);
   const Tag = listItem ? 'li' : 'div';
   return (
     <>
@@ -297,7 +313,8 @@ export function GitChangeBlock({
           ref.current = element;
         }}
         value={listItem ? value : undefined}
-        data-change={added && paragraph?.layout !== 'inline' && !table ? 'added' : undefined}
+        data-change={added ? 'added' : undefined}
+        role={added && !listItem ? 'group' : undefined}
         aria-label={added ? t('Added content') : undefined}
       >
         {children}
@@ -331,9 +348,9 @@ export function GitChangeText({
       if (paragraph.layout === 'separate') continue;
       if (offset >= start && (offset < end || (offset === end && end === paragraph.text.length)))
         content.push(
-          <span key={i} className="fgc-inline-text" data-change="removed">
+          <del key={i} className="fgc-inline-text" data-change="removed">
             {segment.text}
-          </span>,
+          </del>,
         );
       continue;
     }
@@ -354,9 +371,9 @@ export function GitChangeText({
         ) : segment.kind === 'same' ? (
           text
         ) : (
-          <span key={i} className="fgc-inline-text" data-change="added">
+          <ins key={i} className="fgc-inline-text" data-change="added">
             {text}
-          </span>
+          </ins>
         ),
       );
     }

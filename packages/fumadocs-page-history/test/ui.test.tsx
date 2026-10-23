@@ -6,7 +6,7 @@ import { expect, it, vi } from 'vitest';
 import { getContributors, shouldShowContributors, type HistoryCommit } from '../src';
 import { GitChangelog, GitContributors } from '../src/ui';
 import { CommitMessage } from '../src/ui/message';
-import { isFreshChange, relativeDate } from '../src/ui/shared';
+import { HistoryDate, isFreshChange, relativeDate } from '../src/ui/shared';
 
 const commit: HistoryCommit = {
   sha: 'a'.repeat(40),
@@ -60,10 +60,17 @@ it('uses one native toggle for the whole header, with sorting outside the toggle
   const toggles = buttons.filter((button) => /class="[^"]*fgc-toggle/.test(button));
   expect(toggles).toHaveLength(1);
   expect(toggles[0]).toContain('Last edited');
-  expect(toggles[0]).toContain('View full history');
+  expect(toggles[0]).toContain('Collapse history');
   expect(toggles[0]).toContain('aria-expanded="true"');
   expect(toggles[0]).not.toContain('fgc-sort');
   expect(buttons.some((button) => button.includes('fgc-sort'))).toBe(true);
+});
+
+it('offers sorting only while expanded and labels the toggle with its action', () => {
+  const html = renderToStaticMarkup(<GitChangelog commits={[commit]} />);
+  expect(html).toContain('View full history');
+  expect(html).not.toContain('Collapse history');
+  expect(html).not.toContain('fgc-sort');
 });
 
 it('escapes commit text and rejects unsafe author, avatar, tag, and commit URLs', () => {
@@ -273,6 +280,31 @@ it('uses deterministic absolute dates before hydration even with relative time e
   const html = renderToStaticMarkup(<GitChangelog commits={[commit]} commitsRelativeTime />);
   expect(html).toContain('Jan 1, 2026');
   expect(html).not.toContain('ago');
+  expect(html).toContain('data-pending');
+});
+
+it('marks only relative dates as pending before hydration', () => {
+  const html = renderToStaticMarkup(<GitChangelog commits={[commit]} defaultExpanded />);
+  // The summary is always relative; absolute commit rows are final on the server.
+  expect(html.match(/data-pending/g)).toHaveLength(1);
+});
+
+it('keeps relative row dates to the last week and absolute dates beyond it', () => {
+  const date = (now: string, recentOnly: boolean) =>
+    renderToStaticMarkup(
+      <HistoryDate
+        value="2026-01-01T00:00:00Z"
+        locale="en"
+        timeZone="UTC"
+        relative
+        recentOnly={recentOnly}
+        now={Date.parse(now)}
+      />,
+    );
+  expect(date('2026-01-03T00:00:00Z', true)).toContain('2 days ago');
+  expect(date('2026-01-20T00:00:00Z', true)).toContain('Jan 1, 2026');
+  expect(date('2026-01-20T00:00:00Z', false)).toContain('weeks ago');
+  expect(date('2026-01-20T00:00:00Z', false)).not.toContain('data-pending');
 });
 
 it('renders inline commit Markdown without block elements inside a timeline row', () => {
@@ -299,7 +331,7 @@ it('renders generated translation keys through the native provider', () => {
   expect(html).toContain('贡献者');
   expect(html).toContain('页面历史');
   expect(html).toContain('最后编辑于');
-  expect(html).toContain('查看完整历史');
+  expect(html).toContain('收起历史');
   expect(html).not.toContain('Page history');
 });
 

@@ -1,13 +1,13 @@
 ---
 title: Advanced API
-description: Read Git history for custom layouts or content pipelines.
+description: Read Git history yourself for custom layouts and content pipelines.
 ---
 
-The compiler plugin handles normal setup. Use these APIs only for a custom layout or content pipeline.
+The compiler plugin covers most sites. Use these APIs when you need history somewhere the plugin doesn't run, such as a custom layout or a page that isn't compiled from Markdown.
 
 ## Read history
 
-Read Git in a Node server module or build script, then pass the result to the UI:
+Read the history in a server component or build script, then render it:
 
 ```tsx title="components/page-history.tsx"
 import 'server-only';
@@ -23,13 +23,13 @@ export async function PageHistory({ path }: { path: string }) {
 }
 ```
 
-Place it where history should appear. `path` is relative to the Git root, e.g. `content/docs/guide.mdx`, not a URL or slug. Reader options are listed in [Configuration](/docs/configuration#advanced-git-controls); standalone readers use the current working directory to discover Git when `repository.directory` is omitted.
+`path` is the file's path relative to the Git root, such as `content/docs/guide.mdx`, not a URL or slug. The options are the same as the plugin's; see [Advanced Git controls](/docs/configuration#advanced-git-controls). Without `repository.directory`, Git is found from the current working directory.
 
-Without Git at runtime, save the records as JSON during your build and import that snapshot. Git requires a complete checkout; failed commands and shallow checkouts report errors.
+This needs Git and a full checkout wherever the code runs, and it throws if the clone is shallow or a Git command fails. If your server doesn't have Git, read the history during the build, save it as JSON, and import that file instead.
 
 ## Reuse a reader
 
-Each `readPageHistory()` call reads fresh repository metadata. A build processing multiple files can share a reader:
+Each `readPageHistory()` call reads the repository's metadata again. If a build processes many files, create one reader and reuse it:
 
 ```ts
 import { createHistoryReader } from 'fumadocs-page-history/git';
@@ -38,13 +38,13 @@ const history = createHistoryReader({ repository: { url: 'https://github.com/own
 const commits = await history.read('content/docs/guide.mdx');
 ```
 
-Create a new reader for each build. The compiler plugins manage this themselves.
+Create a new reader for each build so it doesn't keep outdated data. The compiler plugins already do this.
 
 ## Components
 
-`GitChangelog` accepts `commits`, optional additional `authors`, and the [display props](/docs/localization#display-options). Pass `repository: { url }` when manually supplied records lack `repositoryUrl`.
+`GitChangelog` takes `commits`, optional extra `authors`, and the [display options](/docs/localization#display-options) as props. If your commit records don't include `repositoryUrl`, pass `repository={{ url }}` so that `#123` issue links work.
 
-For contributors only:
+To show only contributors:
 
 ```tsx
 import { GitContributors } from 'fumadocs-page-history/ui';
@@ -52,10 +52,13 @@ import { GitContributors } from 'fumadocs-page-history/ui';
 <GitContributors commits={commits} authors={authors} />;
 ```
 
-`resolveAuthors(names, authorMappings)` from the Git entry point resolves additional authors. `shouldShowChangelog(frontmatter)` and `shouldShowContributors(frontmatter)` from `fumadocs-page-history` apply the same per-page controls as the plugins.
+A few helpers match what the plugins do:
+
+- `resolveAuthors(names, authorMappings)` from `fumadocs-page-history/git` turns frontmatter `authors` into author records.
+- `shouldShowChangelog(frontmatter)` and `shouldShowContributors(frontmatter)` from `fumadocs-page-history` apply the [per-page settings](/docs/configuration#per-page-controls).
 
 ## Workspace changes
 
-The [Workspace changes guide](/docs/workspace-changes) covers the compiler plugin and local endpoint. For a custom integration, `readPageChanges(options, sourcePath)` from `fumadocs-page-history/workspace` reads the comparison and returns serializable changes.
+The [Workspace changes guide](/docs/workspace-changes) covers the normal setup. For your own integration, `readPageChanges(options, sourcePath)` from `fumadocs-page-history/workspace` returns the comparison as JSON-serializable data.
 
-`GitPageChangesView`, `GitChangeList`, `GitChangeBlock`, and `GitChangeText` from `fumadocs-page-history/ui` render those changes independently of Git access and automatic refresh. The [inline Demo](/docs/demo#inline-workspace-changes) uses this separation with saved source documents.
+`GitPageChangesView`, `GitChangeList`, `GitChangeBlock`, and `GitChangeText` from `fumadocs-page-history/ui` render that data. They don't access Git or refresh anything themselves; the [demo](/docs/demo#inline-workspace-changes) uses them with saved examples.

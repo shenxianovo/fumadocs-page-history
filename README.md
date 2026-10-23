@@ -1,19 +1,19 @@
 # fumadocs-page-history
 
-Per-page Git history and contributors for Fumadocs. A community-maintained integration inspired by [Nolebase Git Changelog](https://nolebase-integrations.ayaka.io/pages/en/integrations/git-changelog/).
+Show each page's Git history and contributors at the bottom of your Fumadocs pages. A community-maintained integration inspired by [Nolebase Git Changelog](https://nolebase-integrations.ayaka.io/pages/en/integrations/git-changelog/).
 
-[Documentation](https://fumadocs-page-history.vercel.app/docs) · [Live demo](https://fumadocs-page-history.vercel.app/docs/demo)
+[Documentation](https://fumadocs-page-history.vercel.app/docs) · [Demo](https://fumadocs-page-history.vercel.app/docs/demo)
 
-- Automatically append contributors and history with MDX or Sätteri.
-- Enable each section independently, globally or per page.
-- Follow file renames, credit co-authors, and display release tags.
-- Use Fumadocs components, themes, accessible collapse controls, and translations.
-- Optionally show uncommitted edits directly in rendered documents during local development.
-- Optionally resolve GitHub avatars and profile links at build time, with caching and bounded requests.
+- Adds contributors and a collapsible commit list to every page, with MDX or Sätteri and no layout changes.
+- Follows renamed files, credits co-authors, and shows release tags.
+- Turns each section on or off for the whole site or for a single page.
+- Uses Fumadocs components, themes, and translations, with Chinese labels included.
+- Shows GitHub avatars through author mappings, or through cached API lookups during the build.
+- Optionally highlights your uncommitted edits in the rendered page while you write.
 
 ## Quick start
 
-Requires Node.js 24.14+, Fumadocs 16.17+, and Git with a complete checkout.
+You need Node.js 24.14+, Fumadocs 16.17+, and a Git checkout with full history.
 
 ```sh
 pnpm add fumadocs-page-history
@@ -25,7 +25,7 @@ Import the stylesheet after your Fumadocs styles:
 @import 'fumadocs-page-history/css/preset.css';
 ```
 
-Register the compiler plugin. The repository URL is the only required setting:
+Register the plugin. The repository URL is the only required option:
 
 ```ts
 import { defineConfig } from 'fumadocs-mdx/config';
@@ -45,58 +45,9 @@ export default defineConfig({
 });
 ```
 
-Each committed document gets contributors and a collapsible history after its body. No page-template changes are needed. Register the plugin in the documentation collection if your site also compiles other MDX content.
+Every committed page now ends with its contributors and history. History is read from Git during the build, so the deployed site doesn't need Git, but CI needs a full checkout (`fetch-depth: 0` in GitHub Actions).
 
-To associate a Git author with a GitHub account, add an optional mapping:
-
-```ts
-{
-  repository: { url: 'https://github.com/owner/repository' },
-  authorMappings: [
-    { gitName: 'Alex', githubUsername: 'alex' },
-  ],
-}
-```
-
-Mappings supply profile links and avatars without GitHub API requests. Without mappings, GitHub noreply emails supply accounts; other authors appear with their Git names and initials.
-
-Dates use the reader's browser time zone. Server HTML starts in UTC and switches after hydration. For Chinese labels and dates, follow the [Display & language](https://fumadocs-page-history.vercel.app/docs/localization).
-
-History is collected at compilation time. New files need a first commit; restart the development server after Git-only changes. Use a complete checkout (`fetch-depth: 0` in GitHub Actions). The deployed site does not need Git.
-
-For a migration that rewrites a page too heavily for Git to detect a rename, use the build-time `getHistoryPaths` option to return additional paths relative to the Git root:
-
-```ts
-getHistoryPaths: (sourcePath) =>
-  sourcePath === 'docs/about/introduction.mdx'
-    ? ['docs/about/introduction.md']
-    : [],
-```
-
-The current path is always included. Histories follow actual renames, preserve page creation and independent edits made during merges, and do not follow template copies. Pure merges that keep the page identical to any parent are omitted; their branch commits are still followed. Results are deduplicated by SHA and sorted by author date before limiting. The same option is available to both compiler plugins, `createHistoryReader`, and `readPageHistory`; no migration paths are guessed.
-
-See [Setup](https://fumadocs-page-history.vercel.app/docs), [Configuration](https://fumadocs-page-history.vercel.app/docs/configuration), and [Troubleshooting](https://fumadocs-page-history.vercel.app/docs/troubleshooting). Both Radix UI and Base UI are supported. Sätteri uses `gitChangelog` from `fumadocs-page-history/satteri` with the same settings.
-
-## Inline changes during development
-
-Enable `workspaceChanges: true` beside `repository` in the compiler plugin options. Add a local Next.js endpoint:
-
-```ts
-// app/api/page-changes/route.ts
-import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
-```
-
-`contentDirectory` is relative to the Git root. A custom URL can be set with `workspaceChanges: { endpoint: '/api/page-changes' }`.
-
-While running the development server, paragraph edits show shared text once and mark only removed words in red and added words in green, directly in the normal document. Lists compare individual items, keeping unchanged items once; simple items support the same word highlights as paragraphs. Highlight backgrounds preserve the normal text width and alignment. Full paragraph rewrites retain both revisions, using a light background for each block and stronger word highlights for changes. Entirely added or removed blocks receive the corresponding background; adding a table row highlights only that row. There are no line numbers or separate comparison views. Changes compare the latest commit with the current source, including staged and unstaged edits. They refresh every three seconds and when the window regains focus, so committing or reverting clears the markers without restarting the server.
-
-Production builds keep normal documents and metadata-only history. The endpoint returns 404 outside development and accepts only same-origin localhost requests. Sources over 200 KB, binary content and merge conflicts show a fallback. See [Workspace changes](https://fumadocs-page-history.vercel.app/docs/workspace-changes) for details.
-
-The public [Demo](https://fumadocs-page-history.vercel.app/docs/demo#inline-workspace-changes) includes saved, interactive examples of inline changes. It uses the real comparison and rendering components with fixed source documents, so visitors can see the effect without a local Git checkout.
+The [package README](packages/fumadocs-page-history/README.md) covers GitHub avatars, migrated pages, and highlighting uncommitted edits. The [documentation](https://fumadocs-page-history.vercel.app/docs) covers everything else.
 
 ## Workspace
 
@@ -115,9 +66,9 @@ pnpm docs-dev        # http://127.0.0.1:3013
 pnpm check           # format, lint, tests, types, package and docs build
 ```
 
-`pnpm docs-dev` builds the package before starting Next.js. When editing package code, run `pnpm --filter fumadocs-page-history dev` in another terminal. Restart the docs server after Git-only changes.
+`pnpm docs-dev` builds the package before starting Next.js. While you edit package code, run `pnpm --filter fumadocs-page-history dev` in another terminal to rebuild it on save. Restart the docs server after you commit, so pages pick up the new history.
 
-The demo uses a saved snapshot of this project's public Git history with shenxianovo's GitHub profile, so displaying its history does not require a token. Other docs pages use this repository's actual Git history. An optional `GITHUB_TOKEN` can be supplied to the docs build to resolve authors of commits already available in its configured GitHub repository.
+The demo shows a saved snapshot of this repository's history, so it needs no token. The other pages use the live Git history. To show GitHub accounts for their authors, pass a `GITHUB_TOKEN` to the docs build.
 
 ## Releases
 
@@ -154,10 +105,10 @@ After validation passes, pushes to `main` deploy the docs and demo to Vercel. Pu
 
 The Vercel project uses the `docs` root directory with files outside the root directory included, the Next.js preset, and Node.js 24. Build settings are in `docs/vercel.json`.
 
-During the upstream guide migration, [the legacy documentation site](https://fumadocs-git-changelog.vercel.app) serves the fixed `v0.1.1` snapshot from a separate Vercel project. CI updates the new Page History site. Keep the legacy deployment available until the upstream documentation update has been submitted.
+[The old documentation site](https://fumadocs-git-changelog.vercel.app) still serves the `v0.1.1` docs from a separate Vercel project, and CI doesn't touch it. Keep it online until the upstream documentation update has been submitted.
 
 GitHub Actions requires the repository variables `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`, and the repository secret `VERCEL_TOKEN`. The docs build uses the workflow's read-only `GITHUB_TOKEN` for optional author lookup.
 
 ## License and credits
 
-MIT. See [LICENSE](LICENSE) and [NOTICE](packages/fumadocs-page-history/NOTICE). Originally developed as an integration proposal for Fumadocs; maintained independently as a community package.
+MIT. See [LICENSE](LICENSE) and [NOTICE](packages/fumadocs-page-history/NOTICE). This started as a proposed Fumadocs integration and is now maintained independently as a community package.

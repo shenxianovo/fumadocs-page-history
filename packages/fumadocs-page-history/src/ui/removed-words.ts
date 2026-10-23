@@ -48,7 +48,7 @@ export function highlightRemovedWords(segments: Segments) {
             children.push({ type: 'text', value: value.slice(consumed - start, from - start) });
           children.push({
             type: 'element',
-            tagName: 'span',
+            tagName: 'del',
             properties: { className: ['fgc-inline-text'], 'data-change': 'removed' },
             children: [{ type: 'text', value: value.slice(from - start, to - start) }],
           });

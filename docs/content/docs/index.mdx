@@ -1,19 +1,18 @@
 ---
 title: Getting started
-description: Add per-page Git history and contributors, then enable local edit previews when needed.
+description: Show each page's Git history and contributors at the bottom of your Fumadocs pages.
 ---
 
-Page History brings Git context into your Fumadocs pages:
+Page History adds two sections to the end of every Markdown and MDX page, built from the file's commits:
 
-- **Page history:** a collapsible commit timeline after each document.
-- **Contributors:** authors and co-authors, with optional GitHub profiles and avatars.
-- **Workspace changes:** opt-in red and green highlights for uncommitted edits during local development.
+- **Contributors:** everyone who committed to the page, including co-authors, with GitHub avatars when they can be found.
+- **Page history:** when the page was last edited, with a collapsible list of its commits.
 
-[Try the interactive demo](/docs/demo) to see all three. The steps below install history and contributors. Add [workspace changes](/docs/workspace-changes) afterward if you want to review edits in the page.
+While you write, it can also highlight [uncommitted edits](/docs/workspace-changes) directly in the page. The [demo](/docs/demo) shows all three.
 
 ## Setup
 
-Use Node.js 24.14 or later, Fumadocs 16.17 or later, and Git with a complete checkout. Your document files normally stay inside that checkout; the plugin discovers the repository and file paths automatically.
+You need Node.js 24.14 or later, Fumadocs 16.17 or later, and a Git checkout with full history.
 
 <Steps>
 <Step>
@@ -29,7 +28,7 @@ npm i fumadocs-page-history
 
 ### Import the styles
 
-Import after your Fumadocs styles:
+Add this after your Fumadocs styles:
 
 ```css title="app/global.css"
 @import 'fumadocs-page-history/css/preset.css';
@@ -40,7 +39,7 @@ Import after your Fumadocs styles:
 
 ### Register the plugin
 
-Only `repository.url` is required:
+Add the plugin to `source.config.ts`. The only required option is your repository URL, which is used for commit and release links:
 
 <Tabs items={["MDX", "Sätteri"]}>
 <Tab>
@@ -85,25 +84,24 @@ export default defineConfig({
 </Tab>
 </Tabs>
 
-Contributors and history appear after each committed document. No page-template changes are needed.
+Start the development server and open any committed page: contributors and history now appear at the bottom. You don't need to change your page layout.
 
 </Step>
 </Steps>
 
-Keep your existing plugins. If a collection has its own compiler options, register Page History there using the [collection configuration](/docs/configuration#collection-options). Sites with blog posts or other MDX collections should register it only for the intended collection.
+If you already use other remark plugins, add this one to the same list. Global `mdxOptions` apply to every MDX collection, including a blog. To add history to your docs only, or if your docs collection sets its own compiler options, register the plugin in that collection instead. See [Collection options](/docs/configuration#collection-options).
 
-## Check the result
+## How it works
 
-- History is read during compilation; Git is not needed in the deployed site.
-- File renames, co-authors, and release tags are included.
-- Both sections are enabled; the history timeline starts collapsed.
-- Dates switch from UTC server HTML to the reader's browser time zone after hydration.
-- New pages without commits or explicit contributors have no footer. Development logs explain why.
-- History and contributor records are compiled into the page. After a Git-only change, restart the development server or build again. The optional workspace comparison refreshes automatically; it has a separate lifecycle.
+- History is read from Git when a page compiles and saved into the page, so your deployed site doesn't need Git.
+- For the same reason, a new commit appears only after the page compiles again. Restart the development server or rebuild.
+- A page with no commits yet shows nothing until you commit it, unless you [credit contributors](/docs/contributors#credit-additional-contributors) in its frontmatter.
+- Renamed files keep their history. Co-authors and release tags are included.
+- The commit list starts collapsed. To change this and other display settings, see [Display & language](/docs/localization).
 
-## Build and deploy
+## Deploy
 
-Git and the full repository history must be available during compilation. The deployed site does not need Git for the history footer. GitHub Actions needs a full checkout:
+Your build needs a checkout with full history, not a shallow clone. In GitHub Actions, check out with:
 
 ```yaml
 - uses: actions/checkout@v6
@@ -111,14 +109,14 @@ Git and the full repository history must be available during compilation. The de
     fetch-depth: 0
 ```
 
-For an existing shallow clone, run `git fetch --unshallow`.
+To convert an existing shallow clone, run `git fetch --unshallow`.
 
 ## Next steps
 
-| Goal                                       | Guide                                          |
-| ------------------------------------------ | ---------------------------------------------- |
-| Review edits without leaving the document  | [Workspace changes](/docs/workspace-changes)   |
-| Connect authors to GitHub accounts         | [Contributors](/docs/contributors)             |
-| Change the appearance or use Chinese       | [Display & language](/docs/localization)       |
-| Look up an option or configure collections | [Configuration reference](/docs/configuration) |
-| Diagnose a missing footer or stale history | [Troubleshooting](/docs/troubleshooting)       |
+| I want to                                     | Read                                           |
+| --------------------------------------------- | ---------------------------------------------- |
+| See my uncommitted edits highlighted in pages | [Workspace changes](/docs/workspace-changes)   |
+| Show GitHub avatars and profile links         | [Contributors](/docs/contributors)             |
+| Change how history looks, or use Chinese      | [Display & language](/docs/localization)       |
+| Look up an option                             | [Configuration reference](/docs/configuration) |
+| Fix a missing or outdated footer              | [Troubleshooting](/docs/troubleshooting)       |

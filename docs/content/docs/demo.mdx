@@ -4,30 +4,30 @@ description: Try history, contributors, and inline workspace changes with intera
 gitChangelog: false
 ---
 
-Explore [history and contributors](#history-and-contributors), or jump to [inline workspace changes](#inline-workspace-changes). Both previews use saved data and work on the published site.
+Try [history and contributors](#history-and-contributors) or [inline workspace changes](#inline-workspace-changes). Both demos run on saved data, so they work here on the published site.
 
 ## History and contributors
 
-Choose an **Example** or adjust **Preview options**. Expand and sort the timeline, switch languages, and use the site's theme switch to try light and dark mode.
+Pick an **Example**, or change the **Preview options** to see what each setting does. You can expand and sort the list, switch the language, and use the site's theme switch to check dark mode.
 
 <ChangelogDemo />
 
-**Reset** restores the selected example. **Language** changes both labels and dates. **Start expanded** sets the initial open state; the timeline can also be opened directly. To use these settings in your site, see [Display & language](/docs/localization).
+**Reset** goes back to the selected example. **Language** switches both the labels and the date format. **Start expanded** controls whether the list is open when the page loads. To use these settings on your site, see [Display & language](/docs/localization).
 
-The preview uses a saved snapshot of [this project's Git history](https://github.com/shenxianovo/fumadocs-page-history/commits/main/docs/content/docs/index.mdx), with [shenxianovo's GitHub profile](https://github.com/shenxianovo). The **Co-authors** example adds an illustrative author with a longer name and no avatar.
+The data is a saved snapshot of [this project's own history](https://github.com/shenxianovo/fumadocs-page-history/commits/main/docs/content/docs/index.mdx), with [shenxianovo's GitHub profile](https://github.com/shenxianovo). The **Co-authors** example adds a made-up second author with a long name and no avatar.
 
 ## Inline workspace changes
 
-Select **Change example** to explore paragraph edits, Chinese word boundaries, table rows, and link destinations. Removed content is red and added content is green. In a full rewrite, each paragraph has a light background and the changed words have stronger highlights.
+Pick a **Change example** to see how different edits look: a reworded paragraph, Chinese text, table changes, and a changed link. Removed text is red and struck through; added text is green. When most of a paragraph is rewritten, both versions are shown in full, and the changed words are highlighted more strongly.
 
 <WorkspaceDemo />
 
-These fixed sample documents use the package's actual comparison and rendering components. They do not read a visitor's checkout or require GitHub access.
+These examples run the package's real comparison and rendering code on fixed sample text. Nothing is read from your computer or from GitHub.
 
 ## Try your own documents
 
-Follow the [Workspace changes guide](/docs/workspace-changes) to enable local comparison in your site.
+To set this up on your site, follow the [Workspace changes guide](/docs/workspace-changes).
 
-To try this repository locally, run `pnpm docs-dev` and edit a phrase in [Configuration reference](/docs/configuration) or another document. Save to update the content; stage or commit to see how the markers respond. Git-only changes refresh within three seconds. In development, this page's own source edits are highlighted too; the interactive examples continue to use their saved sources.
+To try it in this repository, run `pnpm docs-dev`, then edit a sentence in [Configuration reference](/docs/configuration) and save. The edit is highlighted in the page. Stage or commit it, and the highlight updates within three seconds. Your edits to this page are highlighted too, while the examples above keep showing their saved text.
 
-Live checkout comparisons run only in local development. Production documents keep their normal appearance, while the saved examples above remain interactive.
+Highlighting only runs in local development. Published pages look normal.

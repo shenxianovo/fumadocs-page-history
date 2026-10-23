@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { valueToEstree } from 'estree-util-value-to-estree';
-import type { Heading, Root } from 'mdast';
-import { slug } from 'github-slugger';
+import type { Heading, Nodes, Root } from 'mdast';
+import GithubSlugger from 'github-slugger';
 import { toString } from 'mdast-util-to-string';
 import type { MdxjsEsm, MdxJsxFlowElement } from 'mdast-util-mdx';
 import { createHistoryReader, resolveAuthors, type HistoryOptions } from '../git';
@@ -18,6 +18,39 @@ export interface GitChangelogOptions extends HistoryOptions {
   filter?: (filePath: string) => boolean;
   /** Serializable UI defaults, shared by every injected footer. */
   display?: Omit<GitChangelogProps, 'commits' | 'authors' | 'repository'>;
+}
+
+/**
+ * Anchors the page already uses: heading slugs and explicit ids. Prose that merely
+ * mentions "Git history" must not push the footer anchors to `git-history-1`.
+ */
+function collectIds(tree: Root): Set<string> {
+  const ids = new Set<string>();
+  // Mirror Fumadocs' per-page slugger, which suffixes repeated headings.
+  const slugger = new GithubSlugger();
+  function visit(node: Nodes) {
+    const id = (node.data as { hProperties?: { id?: unknown } } | undefined)?.hProperties?.id;
+    if (typeof id === 'string') ids.add(id);
+    else if (node.type === 'heading') {
+      // Headings not yet processed by remark-heading may carry a `[#custom-id]` suffix.
+      const text = toString(node);
+      ids.add(/\[#([^\]\s]+)\]\s*$/.exec(text)?.[1] ?? slugger.slug(text.trim()));
+    }
+    if (node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') {
+      for (const attribute of node.attributes)
+        if (
+          attribute.type === 'mdxJsxAttribute' &&
+          attribute.name === 'id' &&
+          typeof attribute.value === 'string'
+        )
+          ids.add(attribute.value);
+    } else if (node.type === 'html') {
+      for (const [, value] of node.value.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)) ids.add(value);
+    }
+    if ('children' in node) for (const child of node.children) visit(child as Nodes);
+  }
+  visit(tree);
+  return ids;
 }
 
 /** Build-time only: no Git options, author mappings, or Node imports enter the generated module. */
@@ -60,14 +93,14 @@ export function createFooter(options: GitChangelogOptions) {
     }
 
     const source = JSON.stringify(tree);
-    const headingText = slug(toString(tree));
     const component = showChangelog ? 'GitChangelog' : 'GitContributors';
     let localName = '_FumadocsGitChangelog';
     while (source.includes(localName)) localName += '_';
     const labelName = `${localName}Label`;
+    const takenIds = collectIds(tree);
     const uniqueId = (base: string) => {
       let id = base;
-      while (source.includes(id) || headingText.includes(id)) id += '-1';
+      while (takenIds.has(id)) id += '-1';
       return id;
     };
     const historyId = options.display?.id ?? uniqueId('git-history');

@@ -106,9 +106,10 @@ it('keeps a rewritten paragraph in two blocks with stronger word highlights on b
   );
   expect(html.match(/Page History/g)).toHaveLength(2);
   expect(html).toContain('class="fgc-inline-removed"');
-  expect(html).toContain('class="fgc-inline-block" data-change="added"');
-  expect(html).toMatch(/Page History\s*<span[^>]*data-change="removed"/);
-  expect(html).toMatch(/Page History\s*<span[^>]*data-change="added"/);
+  expect(html).toContain('class="fgc-inline-block" data-change="added" role="group"');
+  expect(html).toMatch(/class="fgc-inline-removed" role="group"/);
+  expect(html).toMatch(/Page History\s*<del[^>]*data-change="removed"/);
+  expect(html).toMatch(/Page History\s*<ins[^>]*data-change="added"/);
   expect(html).toContain('href="/docs/demo"');
   expect(html.replace(/<[^>]*>/g, '')).toBe(
     previous.replace('[interactive demo](/docs/demo)', 'interactive demo') + current,
@@ -241,6 +242,8 @@ it('keeps a deleted GFM table as a table rather than merging its pipe syntax int
   expect(html).toContain('<th>Meaning</th>');
   expect(html).toContain('<td>Old meaning</td>');
   expect(result.changes.paragraphs).toEqual([]);
+  // Rows carry table additions; the unstyled table block itself gets no label or role.
+  expect(html).toMatch(/<div class="fgc-inline-block"><table>/);
 });
 
 it.each([

@@ -55,8 +55,8 @@ export function Author({
         <img
           src={avatar}
           alt=""
-          width={compact ? 22 : 36}
-          height={compact ? 22 : 36}
+          width={compact ? 22 : 28}
+          height={compact ? 22 : 28}
           loading="lazy"
           className="fgc-avatar"
         />
@@ -90,6 +90,38 @@ export function useBrowserTimeZone() {
   return timeZone;
 }
 
+// Formatters are costly to construct and every date re-renders once a minute.
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+const relativeFormats = new Map<string, Intl.RelativeTimeFormat>();
+
+function dateFormat(
+  locale: string,
+  timeZone: string,
+  style: 'medium' | 'full',
+): Intl.DateTimeFormat {
+  const key = `${locale}\n${timeZone}\n${style}`;
+  let format = dateFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(
+      locale,
+      style === 'medium'
+        ? { dateStyle: 'medium', timeZone }
+        : { dateStyle: 'full', timeStyle: 'long', timeZone },
+    );
+    dateFormats.set(key, format);
+  }
+  return format;
+}
+
+function relativeFormat(locale: string): Intl.RelativeTimeFormat {
+  let format = relativeFormats.get(locale);
+  if (!format) {
+    format = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    relativeFormats.set(locale, format);
+  }
+  return format;
+}
+
 export function relativeDate(value: string, now: number, locale: string): string {
   const seconds = (Date.parse(value) - now) / 1000;
   const units: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -103,11 +135,11 @@ export function relativeDate(value: string, now: number, locale: string): string
   ];
   const [unit, size] =
     units.find(([, size]) => Math.abs(seconds) >= size) ?? units[units.length - 1];
-  return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
-    Math.round(seconds / size),
-    unit,
-  );
+  return relativeFormat(locale).format(Math.round(seconds / size), unit);
 }
+
+/** Beyond a week, relative labels such as "last week" stop telling entries apart. */
+const RECENT_CHANGE_MS = 7 * 86_400_000;
 
 export function isFreshChange(date: string, now: number | null): boolean {
   const age = now === null ? Infinity : now - Date.parse(date);
@@ -119,26 +151,33 @@ export function HistoryDate({
   locale,
   timeZone,
   relative,
+  recentOnly = false,
   now,
 }: {
   value: string;
   locale: string;
   timeZone: string;
   relative?: boolean;
+  /** Use the relative form only within a week; older dates stay absolute. */
+  recentOnly?: boolean;
   now: number | null;
 }) {
   const parsed = new Date(value);
-  const absolute = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone }).format(
-    parsed,
-  );
-  const title = new Intl.DateTimeFormat(locale, {
-    dateStyle: 'full',
-    timeStyle: 'long',
-    timeZone,
-  }).format(parsed);
+  const showRelative =
+    relative &&
+    now !== null &&
+    (!recentOnly || Math.abs(now - parsed.getTime()) < RECENT_CHANGE_MS);
   return (
-    <time dateTime={value} title={title}>
-      {relative && now !== null ? relativeDate(value, now, locale) : absolute}
+    <time
+      dateTime={value}
+      title={dateFormat(locale, timeZone, 'full').format(parsed)}
+      // The server cannot know the reader's clock; the stylesheet hides this
+      // absolute fallback until hydration instead of flashing it.
+      data-pending={relative && now === null ? '' : undefined}
+    >
+      {showRelative
+        ? relativeDate(value, now, locale)
+        : dateFormat(locale, timeZone, 'medium').format(parsed)}
     </time>
   );
 }

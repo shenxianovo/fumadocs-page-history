@@ -4,11 +4,6 @@
 @import 'fumadocs-ui/css/preset.css';
 @import 'fumadocs-page-history/css/preset.css';
 @import '@fumadocs/story/css/preset.css';
-@source '../../packages/fumadocs-page-history/dist';
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
 
 .history-preview .fgc-section {
   margin-block: 1.5rem;

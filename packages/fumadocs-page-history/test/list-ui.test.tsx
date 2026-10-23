@@ -131,7 +131,7 @@ describe.each(['remark', 'satteri'] as const)('%s list changes', (compiler) => {
     );
     expect(deleted.match(/Kept list/g)).toHaveLength(1);
     expect(deleted.indexOf('Removed list')).toBeLessThan(deleted.indexOf('Divider'));
-    expect(deleted).toMatch(/<aside[^>]*><ul>/);
+    expect(deleted).toMatch(/<div[^>]*role="group"[^>]*><ul>/);
   });
 
   it('preserves links and limits a complex-item fallback to that item', async () => {

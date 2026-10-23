@@ -1,13 +1,13 @@
 ---
 title: Display & language
-description: Adjust history presentation, translated labels, and date formatting.
+description: Change how the history looks, translate its labels, and format dates.
 ---
 
-Use `display` settings to change the history's appearance. For Chinese, configure both translated interface labels and date formatting. These settings apply after the [minimal installation](/docs); the [Demo](/docs/demo#history-and-contributors) lets you try them before editing your site.
+This page covers the display options and how to show the sections in Chinese or another language. You can try most options in the [demo](/docs/demo#history-and-contributors) first.
 
 ## Display options
 
-Set `display` in plugin settings, or pass these props to `GitChangelog`:
+Set these under `display` in the plugin options, or pass them as props if you render `GitChangelog` yourself:
 
 ```ts
 const display = {
@@ -17,27 +17,29 @@ const display = {
 };
 ```
 
-| Setting                                         | Default   | Effect                                                 |
-| ----------------------------------------------- | --------- | ------------------------------------------------------ |
-| `locale`                                        | `en`      | Date formatting and localized contributor names.       |
-| `defaultExpanded`                               | `false`   | Show the timeline on initial render.                   |
-| `commitsRelativeTime`                           | `false`   | Relative dates for commit rows.                        |
-| `showContributors`                              | `true`    | Show contributors above the timeline.                  |
-| `hideChangelogHeader`, `hideContributorsHeader` | `false`   | Hide section headings and their TOC entries.           |
-| `hideChangelogNoChangesText`                    | `false`   | Hide an empty-history message in manually rendered UI. |
-| `hideSortBy`                                    | `false`   | Hide the sorting button.                               |
-| `displayAuthorsInsideCommitLine`                | `false`   | Add avatars beside each commit.                        |
-| `numCommitHashLetters`                          | `7`       | Short commit hash length.                              |
-| `id`, `contributorsId`                          | Automatic | Override the section anchors.                          |
-| `className`                                     | —         | Add wrapper classes.                                   |
+| Option                                          | Default   | Description                                                         |
+| ----------------------------------------------- | --------- | ------------------------------------------------------------------- |
+| `locale`                                        | `en`      | Language for dates and contributor names.                           |
+| `defaultExpanded`                               | `false`   | Open the commit list when the page loads.                           |
+| `commitsRelativeTime`                           | `false`   | Show commits from the past week as "2 days ago" instead of a date.  |
+| `showContributors`                              | `true`    | Show the contributors section.                                      |
+| `hideChangelogHeader`, `hideContributorsHeader` | `false`   | Hide a section heading, which also removes it from On this page.    |
+| `hideChangelogNoChangesText`                    | `false`   | Hide the "No history yet." message when you render the UI yourself. |
+| `hideSortBy`                                    | `false`   | Hide the sort button.                                               |
+| `displayAuthorsInsideCommitLine`                | `false`   | Show author avatars on each commit.                                 |
+| `numCommitHashLetters`                          | `7`       | Length of the short commit hash.                                    |
+| `id`, `contributorsId`                          | Automatic | Anchor IDs for the two sections.                                    |
+| `className`                                     | —         | Extra classes for the wrapper.                                      |
 
-`locale` controls dates and contributor names. Interface labels use the site's translation provider; configure both with the [single-language setup](#single-language-site) below.
+`locale` affects only dates and contributor names. Labels such as "Page history" and "Last edited" come from your site's translations. Set them up as shown in [Single-language site](#single-language-site).
 
-Visible section headings appear in **On this page**. Automatic anchors avoid existing headings. Multiple manual instances need distinct IDs; a custom `id` gives contributors the default anchor `<id>-contributors`. Screens up to 640px hide commit hashes to leave space for messages.
+- The section headings appear in **On this page**, with anchors that don't clash with your own headings. If you render more than one instance on a page, give each an `id`. Its contributors section then uses `<id>-contributors`.
+- With `commitsRelativeTime`, commits older than a week still show a date, so you can tell them apart. The "Last edited" summary is always relative.
+- On screens 640px wide or narrower, the commit icon is hidden to save space. The hash stays visible because it links to the commit.
 
 ## Single-language site
 
-Keep the minimal plugin setup and add `display.locale`:
+To show the sections in Chinese, start by setting `display.locale`:
 
 ```ts title="source.config.ts"
 import { defineConfig } from 'fumadocs-mdx/config';
@@ -58,7 +60,7 @@ export default defineConfig({
 });
 ```
 
-Register both the Fumadocs and Page History translation keys. Alias the package preset when your site uses presets from other packages:
+Then add Page History's labels to your translations. `gitChangelogTranslations()` registers the label keys, and `zhCN()` supplies the Chinese text. Rename it on import, here to `historyZhCN`, so it doesn't clash with presets from other packages:
 
 ```ts title="lib/translations.ts"
 import { defineTranslations } from 'fumadocs-core/i18n';
@@ -71,9 +73,9 @@ export const translations = defineTranslations()
   .preset(historyZhCN());
 ```
 
-Keep your existing Fumadocs label translations and other package presets in this chain. Page History's preset supplies its own labels only.
+Keep any translations and presets you already have in this chain. `historyZhCN()` covers only Page History's own labels.
 
-Pass the translations to your existing root provider:
+Finally, pass the translations to your root provider:
 
 ```tsx title="app/layout.tsx"
 import { RootProvider } from 'fumadocs-ui/provider/next';
@@ -91,11 +93,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Keep your existing CSS imports and theme configuration. The stylesheet still needs the import from [Setup](/docs#import-the-styles).
-
 ## Multi-language site
 
-Add the keys and preset to your existing Fumadocs i18n configuration:
+If your site already uses Fumadocs i18n, add the label keys and a preset for each language:
 
 ```ts
 const translations = i18n
@@ -105,10 +105,10 @@ const translations = i18n
   .preset('zh', historyZhCN());
 ```
 
-Here `zh` is the route-language key in your site's `i18n` configuration. Pass the active route language when constructing its provider. Register the compiler plugin in each localized collection with its corresponding `display.locale`, such as `en` or `zh-CN`.
+Here `zh` is the language key from your `i18n` configuration. Pass the current language when you create the provider. Then register the plugin in each language's collection, with the matching `display.locale` such as `en` or `zh-CN`.
 
-For a manually rendered `GitChangelog`, pass `locale` for the current page. The [interactive demo](/docs/demo) shows English and Chinese labels and dates.
+If you render `GitChangelog` yourself, pass the current page's `locale`. The [demo](/docs/demo) shows both English and Chinese.
 
 ## Time zones
 
-The reader's browser time zone is detected automatically. Server HTML and the initial client render use UTC; mounted pages use the browser zone. A date near midnight may change after hydration. This happens independently of the page language, with no time-zone configuration.
+Dates appear in each reader's own time zone, detected by the browser, so there is nothing to configure. The server can't know that time zone, so it renders dates in UTC, and the page switches them once it loads. Relative dates such as "yesterday" stay hidden until then. A date shown as a calendar date can move by one day if the commit was made near midnight.

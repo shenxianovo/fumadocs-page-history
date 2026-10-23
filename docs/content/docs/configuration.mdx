@@ -1,28 +1,28 @@
 ---
 title: Configuration reference
-description: Plugin settings, page controls, collection registration, and advanced Git options.
+description: Plugin options, per-page settings, collection setup, and Git options.
 ---
 
-Both compiler plugins accept the same settings. For installation, start with [Getting started](/docs). For a walkthrough, use the guides for [workspace changes](/docs/workspace-changes), [contributors](/docs/contributors), or [display and language](/docs/localization).
+Every option for the two compiler plugins, `remarkGitChangelog` for MDX and `gitChangelog` for Sätteri, which take the same settings. If you're new to Page History, start with [Getting started](/docs).
 
 ## Required and optional settings
 
-| Setting                | Required | Default                         | Meaning                                                                      |
-| ---------------------- | -------- | ------------------------------- | ---------------------------------------------------------------------------- |
-| `repository.url`       | Yes      | —                               | Public HTTP(S) repository URL used for commit and release links.             |
-| `authorMappings`       | No       | `[]`                            | [Git identity and account associations](/docs/contributors#author-mappings). |
-| `display`              | No       | Built-in defaults               | [Presentation and language controls](/docs/localization).                    |
-| `github`               | No       | Disabled                        | [Build-time account lookup](/docs/contributors#optional-github-lookup).      |
-| `repository.directory` | No       | Auto-discovered                 | A directory inside the local checkout, used to locate Git.                   |
-| `content`              | No       | Files keep their checkout paths | Location mapping for documents copied to another directory.                  |
-| `getHistoryPaths`      | No       | No extra paths                  | Additional historical paths for explicitly mapped migrations.                |
-| `workspaceChanges`     | No       | `false`                         | [Inline uncommitted changes](/docs/workspace-changes).                       |
+| Option                 | Required | Default             | Description                                                                                                       |
+| ---------------------- | -------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `repository.url`       | Yes      | —                   | Public repository URL, used for commit and release links.                                                         |
+| `authorMappings`       | No       | `[]`                | Link Git authors to GitHub accounts. See [Author mappings](/docs/contributors#author-mappings).                   |
+| `display`              | No       | —                   | Appearance and language. See [Display & language](/docs/localization).                                            |
+| `github`               | No       | Off                 | Look up GitHub accounts during the build. See [GitHub lookup](/docs/contributors#optional-github-lookup).         |
+| `repository.directory` | No       | Found automatically | A folder inside the checkout, used to find the Git repository.                                                    |
+| `content`              | No       | —                   | Where your content lives in the repository when the build uses a copy. See [Copied documents](#copied-documents). |
+| `getHistoryPaths`      | No       | —                   | Older paths to include in a page's history. See [Migration history](#migration-history).                          |
+| `workspaceChanges`     | No       | `false`             | Highlight uncommitted edits during development. See [Workspace changes](/docs/workspace-changes).                 |
 
-`repository.url` must have no credentials, query, or fragment. It is provided explicitly and is never inferred from remote credentials. Local paths and account-matching selectors stay in the build process.
+`repository.url` must be a plain URL, without credentials, a query string, or a fragment. Page History never reads it from your Git remote, so a token in a remote URL can't leak into your pages. Local paths and author-matching rules stay in the build and are never written into pages.
 
 ## Per-page controls
 
-Extend your page schema while keeping existing compiler settings:
+To change the sections for one page, first add Page History's fields to your page schema:
 
 ```ts
 import { pageSchema } from 'fumadocs-core/source/schema';
@@ -31,18 +31,20 @@ import { gitChangelogSchema } from 'fumadocs-page-history/schema';
 const schema = pageSchema.extend(gitChangelogSchema.shape);
 ```
 
-| Frontmatter                                   | Effect                                                                  |
-| --------------------------------------------- | ----------------------------------------------------------------------- |
-| `gitChangelog: false`                         | Disable both sections and skip Git.                                     |
-| `gitChangelog: { disableChangelog: true }`    | Show contributors only.                                                 |
-| `gitChangelog: { disableContributors: true }` | Show history only.                                                      |
-| `authors: [alex]`                             | Add explicit contributors by mapped account, display name, or Git name. |
+Then use these frontmatter fields:
 
-Explicit contributors can be credited without commits. Pages with neither commits nor explicit contributors have no footer.
+| Frontmatter                                   | Effect                                                                                   |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `gitChangelog: false`                         | Hide both sections. Git isn't read for this page.                                        |
+| `gitChangelog: { disableChangelog: true }`    | Show contributors only.                                                                  |
+| `gitChangelog: { disableContributors: true }` | Show history only.                                                                       |
+| `authors: [alex]`                             | Credit people who have no commits, by mapped GitHub username, display name, or Git name. |
+
+A page with no commits and no `authors` shows neither section.
 
 ## Collection options
 
-A collection's compiler options replace global options. Register the plugin there if the collection has its own options. For MDX, retain the Fumadocs preset:
+If a collection sets its own compiler options, they replace the global ones, so register the plugin in the collection too. For MDX, wrap the options in `applyMdxPreset` to keep the Fumadocs defaults:
 
 ```ts
 import { applyMdxPreset, defineDocs } from 'fumadocs-mdx/config';
@@ -64,23 +66,29 @@ export const docs = defineDocs({
 });
 ```
 
-Sätteri collections register `gitChangelog(options)` in `docs.satteriOptions.mdastPlugins` and set `docs.compiler` to `'satteri'`.
+For Sätteri, add `gitChangelog(options)` to `docs.satteriOptions.mdastPlugins` and set `docs.compiler` to `'satteri'`.
 
 ## Advanced Git controls
 
-| Setting            | Default                | Meaning                                                      |
-| ------------------ | ---------------------- | ------------------------------------------------------------ |
-| `filter`           | All documents          | Select absolute source paths; excluded pages skip Git.       |
-| `maxGitLogCount`   | All commits            | Limit sorted results; Git still reads the full file history. |
-| `excludeBots`      | `true`                 | Exclude bots from contributors, retaining their commits.     |
-| `getCommitURL`     | Repository commit URL  | Customize commit links for another Git host.                 |
-| `getReleaseTagURL` | Repository release URL | Customize release tag links.                                 |
+| Option             | Default            | Description                                                                              |
+| ------------------ | ------------------ | ---------------------------------------------------------------------------------------- |
+| `filter`           | All files          | Receives each file's absolute path. Return `false` to skip the page without reading Git. |
+| `maxGitLogCount`   | All commits        | Show only the newest commits, up to this number.                                         |
+| `excludeBots`      | `true`             | Leave bots out of contributors. Their commits still appear in the history.               |
+| `getCommitURL`     | GitHub commit URL  | Build commit links for another Git host.                                                 |
+| `getReleaseTagURL` | GitHub release URL | Build release tag links for another Git host.                                            |
 
-History follows Git-detected renames, preserves creation commits on merged branches, includes merge changes relative to the first parent, and sorts by author date. Copies of another page start their own history. Lightweight and annotated tags are supported. Commit Markdown links `#123` to `/issues/123`; raw HTML is disabled.
+How history is collected:
+
+- Renames that Git detects are followed. A copy of a page starts with its own, empty history.
+- Commits made on merged branches are included, so a page created on a branch keeps its first commit. A merge commit appears only if it made its own edits to the page.
+- Commits are sorted by author date, newest first.
+- Lightweight and annotated tags both appear as release labels.
+- Commit messages are rendered as Markdown with HTML disabled, and `#123` links to that issue.
 
 ### Migration history
 
-Git can miss a rename when a migration changes most of a document, for example when converting Vue Markdown into React MDX. Explicitly list the previous paths instead of lowering rename detection thresholds for every page:
+Git stops following a rename when the file also changed a lot, for example when you convert Vue Markdown pages to MDX. To keep the older history, list the previous paths yourself. This is more precise than lowering Git's rename threshold for every page:
 
 ```ts
 const previousPaths: Record<string, readonly string[]> = {
@@ -93,7 +101,7 @@ const options = {
 };
 ```
 
-Pass these options to `remarkGitChangelog`, Sätteri's `gitChangelog`, or the Node API:
+The same options work with `remarkGitChangelog`, Sätteri's `gitChangelog`, and the Node API:
 
 ```ts
 import { createHistoryReader } from 'fumadocs-page-history/git';
@@ -102,13 +110,13 @@ const reader = createHistoryReader(options);
 const commits = await reader.read('docs/about/introduction.mdx');
 ```
 
-`getHistoryPaths` receives the normalized repository-relative current path, including any `content` location mapping. It returns additional paths relative to the Git root, even when `repository.directory` points at a subdirectory. The current path is always included; return `[]` for pages without a migration. Every path must remain inside the repository. No `.md`/`.mdx` relationship is inferred.
+`getHistoryPaths` receives the page's path relative to the Git root, after any `content` mapping. It returns older paths, also relative to the Git root, even when `repository.directory` is a subfolder. Return `[]` for pages without older paths; the current path is always included. Paths must stay inside the repository. Nothing is inferred: a `.md` and an `.mdx` file are treated as unrelated unless you list them.
 
-Each path follows actual renames. The combined history is deduplicated by full SHA, sorted by author date (SHA breaks ties), and then limited by `maxGitLogCount`. Author mappings, co-authors, GitHub lookup, release tags, and link callbacks work on the combined result. Like other build settings, this callback and the paths themselves are not serialized into compiled pages.
+Renames of each older path are followed as well. All commits are merged, de-duplicated, sorted by date, and then limited by `maxGitLogCount`. Author mappings, co-authors, GitHub lookup, release tags, and custom links apply to the merged list. The function runs only during the build and isn't included in your pages.
 
 ### Copied documents
 
-When compilation uses a copy of your documents, declare where it belongs in the checkout:
+If your build compiles a copy of the content, for example in a temporary folder, tell Page History where the original lives in the repository:
 
 ```ts
 {
@@ -123,4 +131,4 @@ When compilation uses a copy of your documents, declare where it belongs in the 
 }
 ```
 
-A copied `guide.mdx` reads history for `apps/docs/content/guide.mdx`. The package resolves native Windows or POSIX disk paths, handles symlinked directories, and produces Git-relative paths internally. Files outside `content.directory` and repository paths that escape the checkout are rejected. Use `pathInRepository: '.'` when the content directory represents the repository root.
+With this setup, `/workspace/document-copy/guide.mdx` shows the history of `apps/docs/content/guide.mdx`. Windows paths, POSIX paths, and symlinked folders all work. Files outside `content.directory`, and paths that point outside the repository, are rejected. If the content folder is the repository root, use `pathInRepository: '.'`.

@@ -1,5 +1,19 @@
 # fumadocs-page-history
 
+## 0.4.2
+
+### Patch Changes
+
+- Keep commit hashes visible on small screens so every history entry still links to its commit; the decorative commit icon is hidden instead. Label the history toggle Collapse history while expanded, show the sort button only when the list is visible, and give the toggle and sort button separate ghost-button hovers.
+
+  Mark inline workspace changes with `<ins>` and `<del>`, strike through removed words, and give changed blocks a solid (added) or dashed (removed) edge bar that bleeds into the page gutter, so changes remain distinguishable without color while text keeps its normal alignment.
+
+- Present contributors and page history as compact page metadata: smaller avatars, tighter spacing, and no divider between the sections, while preserving the section headings' size and weight. With `commitsRelativeTime`, commit rows older than a week show their date instead of repeating labels such as "last week". Relative dates are hidden until hydration instead of flashing the server's UTC date, and date formatters are reused across renders.
+
+- Keep the default `#git-history` and `#git-contributors` anchors unless a heading or an explicit `id` on the page already uses them. Previously, any prose, code, or link that mentioned "Git history" moved the anchor to `#git-history-1`.
+
+- Style commit-description images in the preset stylesheet instead of Tailwind utility classes, so the preset no longer asks Tailwind to scan the package output. Label added and removed blocks as groups that screen readers announce, instead of ignored labels and one page landmark per removal, and avoid a development key warning when page content is streamed from Server Components.
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,54 +1,52 @@
 ---
 title: Troubleshooting
-description: Understand missing footers, stale history, and build requirements.
+description: Fixes for missing footers, outdated history, and build errors.
 ---
 
 ## No footer on a new page
 
-A page without commits or explicit contributors has no footer. In development (`NODE_ENV=development`), the plugin reports the Git path and explains that a first commit is needed. Each plugin instance reports a given file once.
+A page gets its footer only after its first commit, unless its frontmatter lists `authors`. Commit the page, then restart the development server.
 
-Commit the page, then restart the development server. If the logged path is unexpected, check an optional [content location mapping](/docs/configuration#copied-documents).
+In development, Page History logs the Git path it looked up for each page without history. If that path looks wrong, check your [content mapping](/docs/configuration#copied-documents).
 
 ## History did not update after a commit
 
-History and contributor records are compiled into the page. A Git-only change does not invalidate the MDX compiler automatically. Restart the development server or produce a fresh production build.
+History is saved into the page when it compiles, and a commit on its own doesn't trigger a recompile. Restart the development server, or run a fresh production build.
 
-This differs from [workspace changes](/docs/workspace-changes): the optional local comparison reads fresh Git state automatically and does not need a restart after staging, committing, or reverting.
+[Workspace changes](/docs/workspace-changes) work differently: their highlights update by themselves after you stage, commit, or revert.
 
 ## No footer on an existing page
 
 Check these in order:
 
-1. The compiler plugin is registered in the collection that actually compiles this page. Collection compiler settings replace global settings.
-2. The page is not excluded by `filter` or frontmatter controls.
-3. The file has committed history under the resolved Git path.
-4. The source is Markdown or MDX. Generated OpenAPI pages and React pages do not run the compiler plugin; custom content pipelines can use the [Git reader and UI](/docs/manual).
+1. The plugin is registered in the collection that compiles this page. If the collection sets its own compiler options, the global ones don't apply to it.
+2. The page isn't skipped by `filter` or by `gitChangelog` in its frontmatter.
+3. The file has commits under the Git path that Page History looks up.
+4. The page is Markdown or MDX. Generated pages, such as OpenAPI pages, and React pages don't go through the plugin. Use the [Advanced API](/docs/manual) for those.
 
 ## Workspace highlights are missing or reconnecting
 
-1. Confirm the site is running in development. Production documents intentionally omit live comparisons; the [Demo](/docs/demo#inline-workspace-changes) still shows saved examples.
-2. Check both integration steps: enable the compiler option and register the [local endpoint](/docs/workspace-changes#add-the-local-endpoint).
-3. Set `contentDirectory` relative to the Git root, including the app's subdirectory when needed. Open the page through localhost.
-4. Save the source and wait for the page to finish rebuilding. The comparison waits until the rendered page matches the working file. While visible, the page retries failed reads automatically.
+1. Make sure you're running the development server. Production builds never show highlights; the [demo](/docs/demo#inline-workspace-changes) uses saved examples instead.
+2. Check both setup steps: the `workspaceChanges` option and the [API route](/docs/workspace-changes#add-the-local-endpoint).
+3. Make sure `contentDirectory` is relative to the Git root, including the app's folder if it lives in a subfolder, and open the site through `localhost`.
+4. After saving, wait for the rebuild to finish. Highlights appear once the page shows your latest save, and failed requests retry automatically.
 
-A metadata notice refers to the document's frontmatter, such as its title or description. These changes do not necessarily affect the body. Large files, conflicts, and complex content have the [documented comparison limits](/docs/workspace-changes#scope-and-limits).
+A "Page metadata changed" notice means the frontmatter changed, such as the title or description; the body may be the same. Some files can't be compared at all. See [Scope and limits](/docs/workspace-changes#scope-and-limits).
 
 ## Git is missing or the checkout is shallow
 
-Git and its full history must be available during compilation. Missing Git, an unavailable checkout, and failed Git commands fail the build. Shallow clones are rejected so the site does not publish partial history.
+The build needs Git and the repository's full history. If Git is missing or a Git command fails, the build fails. Shallow clones are rejected on purpose, so you never publish incomplete history.
 
-Run `git fetch --unshallow` for an existing shallow clone. GitHub Actions needs `actions/checkout` with `fetch-depth: 0`.
-
-The deployed site does not need Git when using the compiler plugin. Custom content pipelines can generate a JSON snapshot before deployment; see [Advanced API](/docs/manual).
+Run `git fetch --unshallow`, or in GitHub Actions, use `actions/checkout` with `fetch-depth: 0`. The deployed site itself doesn't need Git. If you read history with the [Advanced API](/docs/manual) at runtime instead, save it as JSON during the build.
 
 ## A contributor has initials instead of an avatar
 
-Git names and ordinary emails do not identify a GitHub account. Add an [author mapping](/docs/contributors#author-mappings), or enable optional GitHub lookup. Manual mappings and GitHub noreply identities need no token. API lookup needs a build-time token and a commit already present in the configured GitHub repository.
+Page History can't tell which GitHub account a Git name or ordinary email belongs to. Commits made with a GitHub noreply email are matched automatically. For anyone else, add an [author mapping](/docs/contributors#author-mappings), which needs no token, or turn on [GitHub lookup](/docs/contributors#optional-github-lookup), which needs a token during the build and works only for commits already pushed to GitHub.
 
 ## Dates are Chinese but labels are English
 
-`display.locale` changes date formatting and contributor names. Labels come from the site's translation provider. Follow the complete [Display & language setup](/docs/localization#single-language-site).
+`display.locale` changes only dates and contributor names. Labels come from your site's translations; add them as described in [Display & language](/docs/localization#single-language-site).
 
 ## A date changes after the page loads
 
-Server HTML starts in UTC, then the browser applies the reader's time zone. This can cross a calendar-day boundary. Commit instants remain unchanged in each `time` element's `datetime` attribute; the tooltip shows the local date, time, and time zone.
+The server renders dates in UTC. Once the page loads, it switches them to the reader's time zone, which can move a date by one day. Hover a date to see the exact local time; the `datetime` attribute always holds the original timestamp.

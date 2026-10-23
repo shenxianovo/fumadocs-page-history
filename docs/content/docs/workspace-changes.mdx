@@ -1,15 +1,15 @@
 ---
 title: Workspace changes
-description: Review staged and unstaged document edits in the normal page.
+description: Highlight uncommitted edits in the rendered page while you write.
 ---
 
-Enable this feature to see uncommitted edits while browsing your local documentation. Removed content is red and added content is green. The [interactive demo](/docs/demo#inline-workspace-changes) shows saved examples that also work on the published site.
+While the development server runs, Page History can compare each page with its last commit and mark the differences in the rendered page itself, with no separate diff view. Removed text is red and struck through, and added text is green. Changed blocks also get a bar on the left edge, solid for added and dashed for removed, so you can tell them apart without relying on color. Try it in the [demo](/docs/demo#inline-workspace-changes).
 
 ## Enable local comparison
 
 ### Enable the compiler option
 
-After [installing the compiler plugin](/docs), add `workspaceChanges: true` beside `repository` in either compiler plugin's settings:
+After [installing the plugin](/docs), add `workspaceChanges: true` next to `repository` in its options:
 
 ```ts
 {
@@ -20,7 +20,7 @@ After [installing the compiler plugin](/docs), add `workspaceChanges: true` besi
 
 ### Add the local endpoint
 
-Then add a Web-standard GET endpoint in your local application. For Next.js:
+The page fetches its comparison from an API route. In Next.js:
 
 ```ts title="app/api/page-changes/route.ts"
 import { createWorkspaceHandler } from 'fumadocs-page-history/workspace';
@@ -30,39 +30,42 @@ export const dynamic = 'force-dynamic';
 export const GET = createWorkspaceHandler({ contentDirectory: 'content/docs' });
 ```
 
-`contentDirectory` is relative to the **Git root**, including when the app runs in a subdirectory. For example, this documentation site uses `docs/content/docs`. Set `repositoryDirectory` only when the endpoint runs outside the checkout. To change the endpoint URL, use `workspaceChanges: { endpoint: '/api/my-page-changes' }`.
+`contentDirectory` is your content folder's path from the **root of the Git repository**, not from the app. If the app lives in a subfolder, include it: this site, for example, uses `docs/content/docs`. Set `repositoryDirectory` only if the server runs outside the checkout. To serve the route at another URL, set `workspaceChanges: { endpoint: '/api/my-page-changes' }`.
 
 ## Review changes
 
-Open a document normally. The baseline is the latest commit compared with the current working file, including staged and unstaged edits.
+Open any page. It is compared with the last commit, so both staged and unstaged edits show up.
 
-| Change                    | What appears in the document                                                                                |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Edit a paragraph          | Small edits keep shared text once; rewrites keep both paragraphs with stronger highlights on changed words. |
-| Change a link destination | The paragraph appears once; hover over the highlighted link to see the old and new targets.                 |
-| Add a table row           | Only the new row is green.                                                                                  |
-| Add or remove a block     | The complete block receives the corresponding background.                                                   |
-| Edit frontmatter          | A metadata notice indicates changes such as the title or description.                                       |
-| Rename a file             | Comparison uses the original HEAD path. Unchanged content has no highlights.                                |
+| You change                 | What you see                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| A few words in a paragraph | The paragraph appears once, with removed words in red and new words in green.   |
+| Most of a paragraph        | The old and new paragraphs both appear in full, with changed words highlighted. |
+| A link's URL               | The link text is highlighted. Hover it to see the old and new URLs.             |
+| A table                    | A new row is highlighted on its own. A replaced table appears as old and new.   |
+| A whole block              | The added or removed block is highlighted, with a bar on its left edge.         |
+| Frontmatter                | A notice says that the page metadata, such as the title, changed.               |
+| The file name              | The file is compared under its old name. Unchanged text isn't highlighted.      |
 
-New documents appear as additions. Committing or reverting clears the highlights.
+A new file shows up as entirely added. Commit or discard your edits, and the highlights disappear.
 
 ### Automatic updates
 
-Saving a document updates its content through the development server. The comparison also refreshes every three seconds while the page is visible and when the window regains focus, so staging or committing does not require a restart. Failed reads retry automatically.
+Saving a file updates the page as usual. Staging, committing, and reverting are picked up within three seconds, or as soon as you switch back to the window, without a restart. If a request fails, the page keeps retrying.
 
-While the development server is rebuilding, the comparison waits for the rendered page to match the working source. History and contributor records have a separate lifecycle: they are compiled into the page and need a rebuild after Git-only changes.
+While the development server rebuilds, highlights wait until the page shows your latest save, so they never land on outdated text.
+
+The contributors and history sections work differently: they're saved into the page when it compiles, so they update only after a restart. See [Troubleshooting](/docs/troubleshooting#history-did-not-update-after-a-commit).
 
 ## Scope and limits
 
-This feature runs only in local development. Production compilation omits source annotations and the live comparison component. The endpoint returns 404 outside development, accepts only same-origin localhost requests, and reads only Markdown/MDX files inside the configured directory.
+Comparison only runs in development. Production builds contain no highlighting code, and the endpoint returns 404. In development, the endpoint answers only same-origin requests from localhost and reads only Markdown and MDX files inside `contentDirectory`. It never changes anything in Git.
 
-- **Lists:** top-level lists compare individual items. Unchanged items appear once, and single-paragraph items support word and link-target highlights. Items containing nested lists or multiple blocks retain complete old and new versions of that item. Ordered numbering and task checkboxes are preserved.
-- **Word-level highlighting:** ordinary Markdown paragraphs with text, inline code, links, and emphasis. Unicode word segmentation includes Chinese. Replacements with little shared text keep complete old and new paragraphs on light red and green backgrounds, with stronger highlights on the changed words.
-- **Block-level fallback:** complex MDX, code blocks, lists, and table replacements or deletions. Deleted content is rendered as inert Markdown, including GFM tables. JSX and HTML are escaped, so custom components can look different from their original display.
-- **Unavailable comparisons:** binary content, merge conflicts, and excessively complex changes show a notice. Each source is limited to 200,000 bytes by default; configure the endpoint's `maxBytes` option to change this limit.
-- **Source matching:** copied documents must match the checkout source before highlights appear. A deleted document has no normal page to decorate.
+- **Paragraphs:** text, inline code, links, and emphasis are compared word by word. Word boundaries work for Chinese too.
+- **Lists:** items are compared one by one, so unchanged items appear once. Simple items get word highlights. An item with a nested list or several paragraphs is shown as its old and new versions. Numbering and task checkboxes are kept.
+- **Other content:** code blocks, MDX components, and replaced tables are shown as whole old and new blocks. Removed content is rendered as plain Markdown, so a removed custom component may not look like the original.
+- **Not compared:** binary files, files with merge conflicts, very complex changes, and files over 200,000 bytes. The page shows a notice instead. To change the size limit, set the endpoint's `maxBytes` option.
+- **Copied content:** if your build compiles a copy of the content, highlights appear only once the copy matches the checkout. A deleted file has no page to show its changes on.
 
-The comparison reads Git state without modifying it. `gitChangelog: false` controls the history footer independently; the development comparison can still appear on that page.
+`gitChangelog: false` in frontmatter hides the history sections, but highlighting still works on that page.
 
-For [custom integrations](/docs/manual#workspace-changes), use the Git reader and rendering components separately. For connection problems, see [Troubleshooting](/docs/troubleshooting#workspace-highlights-are-missing-or-reconnecting).
+To build your own integration, see the [Advanced API](/docs/manual#workspace-changes). If highlights don't appear, see [Troubleshooting](/docs/troubleshooting#workspace-highlights-are-missing-or-reconnecting).

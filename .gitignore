@@ -11,3 +11,4 @@ coverage/
 **/src/.translations/
 .DS_Store
 .vercel
+.claude/

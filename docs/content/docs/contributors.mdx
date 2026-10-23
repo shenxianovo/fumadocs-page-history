@@ -1,11 +1,13 @@
 ---
 title: Contributors
-description: Associate Git identities with accounts, credit authors, and resolve avatars.
+description: Link Git authors to GitHub accounts and credit people who aren't in the history.
 ---
 
-Contributors come from each document's Git history, including co-authors. Use this guide after [installing the plugin](/docs) to associate those identities with GitHub accounts or credit someone explicitly. Try the [history and contributors demo](/docs/demo#history-and-contributors) to see the result.
+Contributors come from each page's commits, including `Co-authored-by` trailers. By default, each person appears with their Git name and initials. This page shows how to link them to GitHub accounts for avatars and profile links, and how to credit people who didn't commit. To see the result, try the [demo](/docs/demo#history-and-contributors).
 
 ## Author mappings
+
+Map Git identities to GitHub usernames:
 
 ```ts
 const options = {
@@ -17,24 +19,29 @@ const options = {
 };
 ```
 
-Every mapping needs `githubUsername` and at least one of `gitName` or `gitEmail`. Names and emails ignore case and surrounding whitespace. When both selectors are present, **both must match**. Email-qualified mappings take precedence over name-only mappings. Multiple mappings can credit the same account.
+Each mapping needs a `githubUsername` and a `gitName`, a `gitEmail`, or both.
 
-| Mapping field    | Required              | Meaning                                                    |
-| ---------------- | --------------------- | ---------------------------------------------------------- |
-| `githubUsername` | Yes                   | GitHub account used for its profile and avatar.            |
-| `gitName`        | At least one selector | Git author name to match.                                  |
-| `gitEmail`       | At least one selector | Git author email to match.                                 |
-| `displayName`    | No                    | Public name; defaults to `githubUsername`.                 |
-| `avatar`, `url`  | No                    | Override the avatar or profile URL.                        |
-| `i18n`           | No                    | Public names by locale, such as `{ 'zh-CN': '亚历克斯' }`. |
+- Matching ignores letter case and surrounding spaces.
+- If a mapping has both `gitName` and `gitEmail`, a commit must match both.
+- If several mappings match, one with an email wins over one with only a name.
+- Several mappings can point to the same account, for example to cover an old and a new email.
 
-Resolution order is explicit mappings, GitHub noreply addresses, then optional GitHub lookup for unresolved primary authors. Other identities keep their Git names and initials. Account names are never guessed from arbitrary Git names or emails.
+| Field            | Required       | Description                                                 |
+| ---------------- | -------------- | ----------------------------------------------------------- |
+| `githubUsername` | Yes            | GitHub account for the avatar and profile link.             |
+| `gitName`        | One of the two | Git author name to match.                                   |
+| `gitEmail`       | One of the two | Git author email to match.                                  |
+| `displayName`    | No             | Name to show. Defaults to `githubUsername`.                 |
+| `avatar`, `url`  | No             | A different avatar or profile URL.                          |
+| `i18n`           | No             | Names for other locales, such as `{ 'zh-CN': '亚历克斯' }`. |
 
-Each account counts once per commit, including co-authors. Counts reflect returned history records. Matching emails and selectors are not included in public author records.
+For each author, Page History tries your mappings first, then GitHub noreply emails such as `123+alex@users.noreply.github.com`, then the [GitHub API](#optional-github-lookup) if you enable it. Anyone still unmatched keeps their Git name and initials. Account names are never guessed.
+
+Hovering a contributor shows how many commits they made to the page; each person counts once per commit. Emails are used only for matching and never appear in the page.
 
 ## Credit additional contributors
 
-Extend your [page schema](/docs/configuration#per-page-controls), then add contributors in frontmatter:
+To credit someone who didn't commit, such as a reviewer or the original author of migrated content, list them in frontmatter. First [extend your page schema](/docs/configuration#per-page-controls), then:
 
 ```yaml
 ---
@@ -42,13 +49,13 @@ authors: [alex]
 ---
 ```
 
-Names resolve against mapped accounts, display names, or Git names. Explicit contributors can appear without commits. A page with neither commits nor explicit contributors has no footer.
+A name can be a GitHub username from your mappings, a display name, or a Git name. People listed here appear even on a page that has no commits yet.
 
-Use `gitChangelog: { disableChangelog: true }` to show contributors without the history timeline. Other visibility controls are listed in [Per-page controls](/docs/configuration#per-page-controls).
+To show contributors without the history list, set `gitChangelog: { disableChangelog: true }`. The other per-page settings are in [Per-page controls](/docs/configuration#per-page-controls).
 
 ## Optional GitHub lookup
 
-Ordinary emails can be associated with GitHub accounts during compilation:
+For authors with an ordinary email rather than a GitHub noreply address, Page History can ask the GitHub API which account made the commit. Add a token:
 
 ```ts
 {
@@ -57,15 +64,15 @@ Ordinary emails can be associated with GitHub accounts during compilation:
 }
 ```
 
-Only unresolved primary authors are queried. Commits must already exist in that GitHub repository. Co-authors are not assigned the primary author's account. Provide the token to the documentation build step; public repositories need no additional repository permission, and fine-grained tokens for private repositories need **Contents: read**.
+Lookup runs during the build, only for commit authors that no mapping matched, and only for commits that already exist in the GitHub repository. Co-authors are never given the commit author's account. Make the token available to your docs build. Public repositories need no extra permissions. For a private repository, a fine-grained token needs **Contents: read**.
 
-| Setting       | Default                                     | Meaning                                                           |
-| ------------- | ------------------------------------------- | ----------------------------------------------------------------- |
-| `token`       | None                                        | Missing tokens skip lookup with one warning.                      |
-| `cacheDir`    | `node_modules/.cache/fumadocs-page-history` | Git-root-relative cache directory; `false` disables disk caching. |
-| `maxRequests` | `100`                                       | Budget per reader/compiler worker.                                |
-| `timeoutMs`   | `5000`                                      | Timeout per request.                                              |
+| Option        | Default                                     | Description                                                                 |
+| ------------- | ------------------------------------------- | --------------------------------------------------------------------------- |
+| `token`       | None                                        | Without a token, lookup is skipped with a warning.                          |
+| `cacheDir`    | `node_modules/.cache/fumadocs-page-history` | Cache folder, relative to the Git root. Set to `false` to turn caching off. |
+| `maxRequests` | `100`                                       | Maximum API requests per build worker.                                      |
+| `timeoutMs`   | `5000`                                      | Timeout for each request, in milliseconds.                                  |
 
-Successful mappings are cached for seven days; unavailable or unassociated commits for five minutes. Network failures and rate limits are not persisted. Cache keys hash identity emails and are separated by repository. Tokens and emails are never included in pages or cached records.
+Found accounts are cached for seven days and misses for five minutes. Network errors and rate limits aren't cached. The cache is kept per repository and stores hashed emails, never the token or plain emails.
 
-Requests are serialized within each reader, with deduplication and shared disk caching. Workers have separate budgets and may duplicate cold-cache requests. Authentication failures, rate limits, server errors, and timeouts stop further requests in that reader; cached mappings remain available. Lookup or cache failures fall back to local author information, with at most one warning per reader. Omit `github` for offline builds.
+If GitHub rejects the token, rate-limits the build, times out, or returns an error, lookup stops for the rest of that build worker. Authors fall back to their Git names, with a single warning, and the build continues. Each worker has its own request budget, so a parallel build with an empty cache can make a few duplicate requests. For offline builds, leave out `github`.

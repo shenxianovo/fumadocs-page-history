@@ -330,6 +330,24 @@ describe.each(['remark', 'satteri'] as const)('%s automatic footer', (compiler) 
     expect(custom.toc.slice(-2).map((item) => item.url)).toEqual(['#people', '#changes']);
   });
 
+  it('keeps default anchors when only prose, code, or links mention them', async () => {
+    const { toc } = await build({
+      content:
+        '# Article\n\nRead the full Git history and Git contributors.\n\n`git-history` and [link](#git-contributors)',
+    });
+    expect(toc.slice(-2).map((item) => item.url)).toEqual(['#git-contributors', '#git-history']);
+  });
+
+  it('avoids explicit ids and custom heading ids', async () => {
+    const { toc } = await build({
+      content: '# Article\n\n<div id="git-history" />\n\n## People [#git-contributors]',
+    });
+    const urls = toc.slice(-2).map((item) => item.url);
+    expect(urls).not.toContain('#git-history');
+    expect(urls).not.toContain('#git-contributors');
+    expect(new Set(toc.map((item) => item.url)).size).toBe(toc.length);
+  });
+
   it('does not collide with an author-defined binding', async () => {
     const { html } = await build({
       content: 'export const _FumadocsGitChangelog = "Existing";\n\n{_FumadocsGitChangelog}',

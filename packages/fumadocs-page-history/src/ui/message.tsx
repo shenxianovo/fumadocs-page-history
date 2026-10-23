@@ -65,12 +65,7 @@ export function CommitMessage({
             href ? <Link href={href}>{children}</Link> : <span>{children}</span>,
           img: ({ src, alt }) =>
             typeof src === 'string' && src ? (
-              <img
-                src={src}
-                alt={alt ?? ''}
-                loading="lazy"
-                className="my-2 max-h-32 max-w-full rounded-md"
-              />
+              <img src={src} alt={alt ?? ''} loading="lazy" />
             ) : (
               <span>{alt}</span>
             ),

@@ -84,8 +84,16 @@ export function GitChangelog({
     Number.isSafeInteger(numCommitHashLetters) && numCommitHashLetters > 0
       ? numCommitHashLetters
       : 7;
-  const date = (value: string, relative = commitsRelativeTime) => (
-    <HistoryDate value={value} locale={locale} timeZone={timeZone} relative={relative} now={now} />
+  // The summary is always relative; list rows switch to absolute dates after a week.
+  const date = (value: string, summary = false) => (
+    <HistoryDate
+      value={value}
+      locale={locale}
+      timeZone={timeZone}
+      relative={summary || commitsRelativeTime}
+      recentOnly={!summary}
+      now={now}
+    />
   );
   const sortLabel = oldestFirst ? t('Newest first') : t('Oldest first');
   return (
@@ -121,10 +129,7 @@ export function GitChangelog({
             data-fresh={isFreshChange(latest.date, now) || undefined}
           >
             <div className="fgc-header">
-              <CollapsibleTrigger
-                aria-label={expanded ? t('Collapse history') : t('View full history')}
-                className="fgc-toggle"
-              >
+              <CollapsibleTrigger className="fgc-toggle">
                 <span className="fgc-summary">
                   <History className="fgc-history-icon" aria-hidden="true" />
                   <span>
@@ -132,7 +137,9 @@ export function GitChangelog({
                   </span>
                 </span>
                 <span className="fgc-expand">
-                  <span className="fgc-expand-label">{t('View full history')}</span>
+                  <span className="fgc-expand-label">
+                    {expanded ? t('Collapse history') : t('View full history')}
+                  </span>
                   <ChevronDown
                     className="fgc-chevron"
                     data-expanded={expanded}
@@ -140,10 +147,10 @@ export function GitChangelog({
                   />
                 </span>
               </CollapsibleTrigger>
-              {!hideSortBy && (
+              {/* Sorting only affects the expanded list, so it is not offered while collapsed. */}
+              {!hideSortBy && expanded && (
                 <button
                   type="button"
-                  disabled={!expanded}
                   aria-label={sortLabel}
                   title={sortLabel}
                   className={`${buttonVariants({ variant: 'ghost', size: 'icon-sm' })} fgc-sort`}
