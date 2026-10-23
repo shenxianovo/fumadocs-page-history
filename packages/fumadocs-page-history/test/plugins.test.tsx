@@ -60,6 +60,7 @@ export function GitContributors(props) { return 'CONTRIBUTORS:' + JSON.stringify
 export function GitChangelogLabel({ section }) { return section === 'contributors' ? 'Contributors' : 'Page history'; }
 export function GitPageChanges({ children }) { return children; }
 export function GitChangeBlock({ children }) { return children; }
+export function GitChangeList({ children }) { return children; }
 export function GitChangeText({ value }) { return value; }
 `)}`;
 
@@ -68,7 +69,7 @@ export function GitChangeText({ value }) { return value; }
 const workspaceProbe = `data:text/javascript,${encodeURIComponent(`
 import { createElement } from '${import.meta.resolve('react')}';
 import { GitPageChangesView } from '${import.meta.resolve('../dist/ui/index.js')}';
-export { GitChangelog, GitContributors, GitChangelogLabel, GitChangeBlock, GitChangeText } from ${JSON.stringify(probe)};
+export { GitChangelog, GitContributors, GitChangelogLabel, GitChangeBlock, GitChangeText, GitChangeList } from ${JSON.stringify(probe)};
 export function GitPageChanges({ children }) {
   const blocks = Array.isArray(children) ? children : [children];
   const restored = blocks.map(child => child && typeof child === 'object'

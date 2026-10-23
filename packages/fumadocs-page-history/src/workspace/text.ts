@@ -58,10 +58,23 @@ export function compareParagraphs(
   previous: RootContent,
   current: RootContent,
 ): ParagraphChange | undefined {
+  if (
+    previous.type === 'listItem' &&
+    current.type === 'listItem' &&
+    previous.checked !== current.checked
+  )
+    return;
   const oldText = paragraphText(previous);
   const text = paragraphText(current);
   if (oldText === undefined || text === undefined) return;
   if (oldText === text) {
+    // Renumbering an ordered list does not change an item's visible text.
+    if (
+      previous.type === 'listItem' &&
+      current.type === 'listItem' &&
+      JSON.stringify(previous, withoutPosition) === JSON.stringify(current, withoutPosition)
+    )
+      return { text, layout: 'inline', segments: [{ text, kind: 'same' }] };
     const segments = linkTargetSegments(previous, current);
     // Unsupported formatting-only changes retain complete blocks.
     return segments ? { text, layout: 'inline', segments } : undefined;
@@ -85,6 +98,8 @@ export function compareParagraphs(
   // Even a complete rewrite keeps word results for emphasis in both revisions.
   return { text, layout: inline ? 'inline' : 'separate', segments: inlineSegments(changes) };
 }
+
+const withoutPosition = (key: string, value: unknown) => (key === 'position' ? undefined : value);
 
 /** Preserve a paragraph once when its only visible-source change is link targets. */
 function linkTargetSegments(previous: RootContent, current: RootContent) {
@@ -133,6 +148,9 @@ function linkTargetSegments(previous: RootContent, current: RootContent) {
 
 /** Only inline Markdown we can decorate without replacing live MDX components. */
 export function paragraphText(node: RootContent): string | undefined {
+  if (node.type === 'listItem') {
+    return node.children.length === 1 ? paragraphText(node.children[0]) : undefined;
+  }
   if (node.type !== 'paragraph') return;
   function text(value: {
     type: string;

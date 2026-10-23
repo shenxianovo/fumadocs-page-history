@@ -390,10 +390,11 @@
   display: flow-root;
   min-width: 0;
   margin-block: 1.25rem;
-  padding: 0.25rem 0.75rem;
+  padding: 0;
   overflow-wrap: anywhere;
 }
-.fgc-inline-block[data-change='added'] {
+.fgc-inline-block[data-change='added'],
+.fgc-inline-list-item[data-change='added'] {
   background: color-mix(in srgb, var(--fgc-added) 10%, transparent);
 }
 .fgc-inline-removed {
@@ -410,11 +411,9 @@
 .fgc-inline-removed pre {
   overflow-x: auto;
 }
-@media (max-width: 640px) {
-  .fgc-inline-block[data-change='added'],
-  .fgc-inline-removed {
-    padding: 0.25rem 0.5rem;
-  }
+.fgc-inline-removed.fgc-inline-list-item {
+  display: list-item;
+  margin-block: 0;
 }
 .fgc-inline-text[data-change='added'],
 .fgc-inline-text[data-change='link'],

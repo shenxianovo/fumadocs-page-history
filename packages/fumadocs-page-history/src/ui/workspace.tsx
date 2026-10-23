@@ -19,11 +19,13 @@ interface ChangesContext {
   ranges: readonly SourceRange[];
   paragraphs: ReadonlyMap<number, ParagraphChange>;
   removedBefore: Map<number, RemovedContent[]>;
+  listTails: Map<number, RemovedContent[]>;
 }
 const Context = createContext<ChangesContext>({
   ranges: [],
   paragraphs: new Map(),
   removedBefore: new Map(),
+  listTails: new Map(),
 });
 
 export interface GitPageChangesProps {
@@ -136,17 +138,32 @@ export function GitPageChangesView({
   // compiled-text match before applying offsets from the comparison.
   const paragraphs = new Map<number, ParagraphChange>();
   for (const range of ranges) {
+    if (range.kind === 'list') continue;
     const paragraph = changes?.paragraphs.find(
       (entry) => entry.start === range.start && entry.text === range.text,
     );
     if (paragraph) paragraphs.set(range.start, paragraph);
   }
   const removedBefore = new Map<number, RemovedContent[]>();
+  const listTails = new Map<number, RemovedContent[]>();
   for (const removal of changes?.removed ?? []) {
     const paragraph =
       removal.inlineStart === undefined ? undefined : paragraphs.get(removal.inlineStart);
     if (paragraph?.layout === 'inline') continue;
-    const index = ranges.findIndex((range) => range.end >= removal.beforeLine);
+    const index = ranges.findIndex(
+      (range) =>
+        range.end >= removal.beforeLine &&
+        (removal.listStart === undefined
+          ? range.kind !== 'listItem'
+          : range.kind === 'listItem' && range.listStart === removal.listStart),
+    );
+    if (index < 0 && removal.listStart !== undefined) {
+      listTails.set(removal.listStart, [
+        ...(listTails.get(removal.listStart) ?? []),
+        { markdown: removal.markdown, segments: paragraph?.segments },
+      ]);
+      continue;
+    }
     const target = index < 0 ? ranges.length : index;
     removedBefore.set(target, [
       ...(removedBefore.get(target) ?? []),
@@ -154,7 +171,7 @@ export function GitPageChangesView({
     ]);
   }
   return (
-    <Context.Provider value={{ changes, ranges, paragraphs, removedBefore }}>
+    <Context.Provider value={{ changes, ranges, paragraphs, removedBefore, listTails }}>
       <div className="fgc-inline-page">
         {children}
         <RemovedBlocks blocks={removedBefore.get(ranges.length)} />
@@ -163,34 +180,98 @@ export function GitPageChangesView({
   );
 }
 
-function RemovedBlocks({ blocks }: { blocks?: readonly RemovedContent[] }) {
+// The Markdown renderer still handles nested lists and task checkboxes. Only
+// unwrap the outer single-item list, since our host element supplies that li.
+interface MarkdownNode {
+  type: string;
+  tagName?: string;
+  children?: MarkdownNode[];
+}
+
+function unwrapListItem() {
+  return (tree: MarkdownNode) => {
+    const list = tree.children?.find(
+      (node) => node.type === 'element' && ['ul', 'ol'].includes(node.tagName ?? ''),
+    );
+    const item = list?.children?.find((node) => node.type === 'element' && node.tagName === 'li');
+    if (item) tree.children = item.children;
+  };
+}
+
+function RemovedBlocks({
+  blocks,
+  listItem = false,
+}: {
+  blocks?: readonly RemovedContent[];
+  listItem?: boolean;
+}) {
   const t = useTranslations({ note: 'git changelog' });
+  const Tag = listItem ? 'li' : 'aside';
   return blocks?.map(({ markdown, segments }, index) => (
-    <aside key={index} className="fgc-inline-removed" aria-label={t('Removed content')}>
+    <Tag
+      key={index}
+      className={`fgc-inline-removed${listItem ? ' fgc-inline-list-item' : ''}`}
+      aria-label={t('Removed content')}
+    >
       <Markdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={segments ? [highlightRemovedWords(segments)] : []}
+        rehypePlugins={[
+          ...(listItem ? [unwrapListItem] : []),
+          ...(segments ? [highlightRemovedWords(segments)] : []),
+        ]}
         components={{ img: ({ alt }) => <span>{alt ?? ''}</span> }}
       >
         {markdown}
       </Markdown>
-    </aside>
+    </Tag>
   ));
+}
+
+export function GitChangeList({
+  index,
+  ordered,
+  start,
+  className,
+  children,
+}: {
+  index: number;
+  ordered?: boolean;
+  start?: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const { ranges, removedBefore, listTails } = useContext(Context);
+  const Tag = ordered ? 'ol' : 'ul';
+  return (
+    <>
+      <RemovedBlocks blocks={removedBefore.get(index)} />
+      <Tag start={ordered ? start : undefined} className={className || undefined}>
+        {children}
+        <RemovedBlocks blocks={listTails.get(ranges[index]?.start)} listItem />
+      </Tag>
+    </>
+  );
 }
 
 export function GitChangeBlock({
   index,
   table = false,
+  listItem = false,
+  value,
+  className,
   children,
 }: {
   index: number;
   table?: boolean;
+  listItem?: boolean;
+  value?: number;
+  className?: string;
   children: ReactNode;
 }) {
   const { changes, ranges, paragraphs, removedBefore } = useContext(Context);
   const t = useTranslations({ note: 'git changelog' });
   const range = ranges[index];
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
   const paragraph = range && paragraphs.get(range.start);
   useEffect(() => {
     if (!table) return;
@@ -204,17 +285,23 @@ export function GitChangeBlock({
   }, [table, changes, children]);
   const added =
     range && changes?.added.some((line) => line.start <= range.end && line.end >= range.start);
+  const Tag = listItem ? 'li' : 'div';
   return (
     <>
-      <RemovedBlocks blocks={removedBefore.get(index)} />
-      <div
-        className="fgc-inline-block"
-        ref={ref}
+      <RemovedBlocks blocks={removedBefore.get(index)} listItem={listItem} />
+      <Tag
+        className={[listItem ? 'fgc-inline-list-item' : 'fgc-inline-block', className]
+          .filter(Boolean)
+          .join(' ')}
+        ref={(element: HTMLElement | null) => {
+          ref.current = element;
+        }}
+        value={listItem ? value : undefined}
         data-change={added && paragraph?.layout !== 'inline' && !table ? 'added' : undefined}
         aria-label={added ? t('Added content') : undefined}
       >
         {children}
-      </div>
+      </Tag>
     </>
   );
 }

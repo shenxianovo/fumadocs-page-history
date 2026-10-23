@@ -57,6 +57,7 @@ While the development server is rebuilding, the comparison waits for the rendere
 
 This feature runs only in local development. Production compilation omits source annotations and the live comparison component. The endpoint returns 404 outside development, accepts only same-origin localhost requests, and reads only Markdown/MDX files inside the configured directory.
 
+- **Lists:** top-level lists compare individual items. Unchanged items appear once, and single-paragraph items support word and link-target highlights. Items containing nested lists or multiple blocks retain complete old and new versions of that item. Ordered numbering and task checkboxes are preserved.
 - **Word-level highlighting:** ordinary Markdown paragraphs with text, inline code, links, and emphasis. Unicode word segmentation includes Chinese. Replacements with little shared text keep complete old and new paragraphs on light red and green backgrounds, with stronger highlights on the changed words.
 - **Block-level fallback:** complex MDX, code blocks, lists, and table replacements or deletions. Deleted content is rendered as inert Markdown, including GFM tables. JSX and HTML are escaped, so custom components can look different from their original display.
 - **Unavailable comparisons:** binary content, merge conflicts, and excessively complex changes show a notice. Each source is limited to 200,000 bytes by default; configure the endpoint's `maxBytes` option to change this limit.

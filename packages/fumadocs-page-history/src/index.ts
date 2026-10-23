@@ -47,6 +47,9 @@ export type PageDiff = {
 export interface SourceRange {
   start: number;
   end: number;
+  kind?: 'list' | 'listItem';
+  /** The containing list's source line, for placing deleted items. */
+  listStart?: number;
   /** Plain text for paragraphs whose original inline formatting can be retained. */
   text?: string;
 }
@@ -58,7 +61,7 @@ export interface InlinePageChanges {
   additions: number;
   deletions: number;
   added: SourceRange[];
-  removed: { beforeLine: number; markdown: string; inlineStart?: number }[];
+  removed: { beforeLine: number; markdown: string; inlineStart?: number; listStart?: number }[];
   paragraphs: {
     start: number;
     text: string;

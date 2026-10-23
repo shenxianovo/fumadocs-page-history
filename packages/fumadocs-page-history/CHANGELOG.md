@@ -1,5 +1,11 @@
 # fumadocs-page-history
 
+## 0.4.1
+
+### Patch Changes
+
+- Compare workspace list changes per item so unchanged entries are not repeated. Preserve list numbering and task checkboxes, and keep added and removed content aligned with the surrounding text.
+
 ## 0.4.0
 
 ### Minor Changes

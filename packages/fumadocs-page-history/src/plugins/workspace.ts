@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import type { Root, RootContent } from 'mdast';
+import type { Root, RootContent, List } from 'mdast';
+import type { SourceRange } from '../index';
 import type { MdxjsEsm, MdxJsxFlowElement } from 'mdast-util-mdx';
 import { valueToEstree } from 'estree-util-value-to-estree';
 import { createHistoryReader } from '../git';
@@ -29,6 +30,7 @@ export function createWorkspaceWrapper(options: GitChangelogOptions) {
     while (serialized.includes(provider)) provider += '_';
     const block = `${provider}Block`;
     const textComponent = `${provider}Text`;
+    const listComponent = `${provider}List`;
     const attr = (name: string, value: unknown) => ({
       type: 'mdxJsxAttribute' as const,
       name,
@@ -45,27 +47,41 @@ export function createWorkspaceWrapper(options: GitChangelogOptions) {
       },
     });
     const imports: RootContent[] = [];
-    const ranges: { start: number; end: number; text?: string }[] = [];
+    const ranges: SourceRange[] = [];
     const children: RootContent[] = [];
     // Satteri nodes are live handles. Materialize before removing/reinserting
     // them so nested children are not references to removed native nodes.
     const materialized = JSON.parse(serialized) as Root;
-    for (const node of materialized.children) {
-      if (node.type === 'mdxjsEsm' || node.type === 'yaml') {
-        imports.push(node);
-        continue;
-      }
-      if (!node.position) {
-        children.push(node);
-        continue;
-      }
+    function wrap(node: RootContent, list?: List, itemIndex = 0): RootContent {
+      if (!node.position) return node;
       const index = ranges.length;
       const text = paragraphText(node);
       ranges.push({
         start: node.position.start.line,
         end: node.position.end.line,
+        ...(node.type === 'list' ? { kind: 'list' as const } : {}),
+        ...(list ? { kind: 'listItem' as const, listStart: list.position!.start.line } : {}),
         ...(text !== undefined ? { text } : {}),
       });
+      if (node.type === 'list') {
+        return {
+          type: 'mdxJsxFlowElement',
+          name: listComponent,
+          attributes: [
+            attr('key', index),
+            attr('index', index),
+            attr('ordered', !!node.ordered),
+            attr('start', node.start ?? 1),
+            attr(
+              'className',
+              node.children.some((item) => typeof item.checked === 'boolean')
+                ? 'contains-task-list'
+                : '',
+            ),
+          ],
+          children: node.children.map((item, i) => wrap(item, node, i)),
+        } as MdxJsxFlowElement;
+      }
       if (text !== undefined) {
         let offset = 0;
         function decorate(parent: { children: unknown[] }) {
@@ -104,21 +120,65 @@ export function createWorkspaceWrapper(options: GitChangelogOptions) {
             };
           }
       }
-      children.push({
+      let content: MdxJsxFlowElement['children'] = [node] as MdxJsxFlowElement['children'];
+      if (node.type === 'listItem' && list) {
+        const first = node.children[0];
+        if (typeof node.checked === 'boolean' && first?.type === 'paragraph') {
+          first.children.unshift(
+            {
+              type: 'mdxJsxTextElement',
+              name: 'input',
+              attributes: [
+                attr('type', 'checkbox'),
+                attr('disabled', true),
+                attr('checked', node.checked),
+              ],
+              children: [],
+            },
+            { type: 'text', value: ' ' },
+          );
+        }
+        const loose = list.spread || list.children.some((item) => item.spread);
+        content = node.children.map((child) =>
+          !loose && child.type === 'paragraph'
+            ? ({
+                type: 'mdxJsxFlowElement',
+                name: null,
+                attributes: [],
+                children: child.children,
+              } as MdxJsxFlowElement)
+            : child,
+        );
+      }
+      return {
         type: 'mdxJsxFlowElement',
         name: block,
         attributes: [
           attr('key', index),
           attr('index', index),
           ...(node.type === 'table' ? [attr('table', true)] : []),
+          ...(list
+            ? [
+                attr('listItem', true),
+                ...(list.ordered ? [attr('value', (list.start ?? 1) + itemIndex)] : []),
+                ...(node.type === 'listItem' && typeof node.checked === 'boolean'
+                  ? [attr('className', 'task-list-item')]
+                  : []),
+              ]
+            : []),
         ],
-        children: [node],
-      } as MdxJsxFlowElement);
+        children: content,
+      } as MdxJsxFlowElement;
+    }
+    for (const node of materialized.children) {
+      if (node.type === 'mdxjsEsm' || node.type === 'yaml') imports.push(node);
+      else children.push(wrap(node));
     }
     const names = [
       ['GitPageChanges', provider],
       ['GitChangeBlock', block],
       ['GitChangeText', textComponent],
+      ['GitChangeList', listComponent],
     ];
     const moduleName = 'fumadocs-page-history/ui';
     const esm: MdxjsEsm = {
